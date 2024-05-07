@@ -1,0 +1,65 @@
+[0.000000] (-) TimerEvent: {}
+[0.000118] (gui_teleop) JobQueued: {'identifier': 'gui_teleop', 'dependencies': OrderedDict()}
+[0.000133] (vision_pkg) JobQueued: {'identifier': 'vision_pkg', 'dependencies': OrderedDict()}
+[0.000841] (gui_teleop) JobStarted: {'identifier': 'gui_teleop'}
+[0.020826] (vision_pkg) JobStarted: {'identifier': 'vision_pkg'}
+[0.100034] (-) TimerEvent: {}
+[0.200913] (-) TimerEvent: {}
+[0.301220] (-) TimerEvent: {}
+[0.401595] (-) TimerEvent: {}
+[0.501820] (-) TimerEvent: {}
+[0.602087] (-) TimerEvent: {}
+[0.622806] (gui_teleop) Command: {'cmd': ['/usr/bin/python3', 'setup.py', 'develop', '--editable', '--build-directory', '/workspaces/isaac_ros-dev/build/gui_teleop/build', '--no-deps', 'install_data'], 'cwd': '/workspaces/isaac_ros-dev/build/gui_teleop', 'env': {'DALI_BUILD': '5838886', 'LIBRARY_PATH': '/usr/local/cuda/lib64/stubs:', 'PYTHONWARNINGS': 'ignore:::setuptools.command.install,ignore:::setuptools.command.easy_install,ignore:::pkg_resources', 'USER': 'ckong35', 'TF_ADJUST_SATURATION_FUSED': '1', 'CUSOLVER_VERSION': '11.4.1.48', 'HOSTNAME': 'MEL06486L.me.gatech.edu', 'CUTENSOR_VERSION': '1.6.1.5', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib:/opt/tritonserver/backends/onnxruntime:/usr/local/cuda/compat/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/opt/tritonserver/lib', 'HOME': '/home/admin', 'NVIDIA_TRITON_SERVER_VERSION': '22.09', 'OLDPWD': '/workspaces/isaac_ros-dev/.venv', 'CUDA_CACHE_DISABLE': '1', 'ROS_PYTHON_VERSION': '3', 'USER_UID': '907273', 'ENV': '/etc/shinit_v2', 'RDMACORE_VERSION': '36.0', 'NVJPEG_VERSION': '11.9.0.86', 'NVIDIA_BUILD_ID': '44909143', 'CUDA_VERSION': '11.8.0.062', 'CUBLAS_VERSION': '11.11.3.6', 'NSIGHT_SYSTEMS_VERSION': '2022.3.1.43', 'ROS_DISTRO': 'humble', 'OPAL_PREFIX': '/opt/hpcx/ompi', 'NVIDIA_REQUIRE_CUDA': 'cuda>=9.0', 'TRT_VERSION': '8.5.0.12', 'GDRCOPY_VERSION': '2.3', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'NVIDIA_DRIVER_CAPABILITIES': 'all', 'POLYGRAPHY_VERSION': '0.38.0', 'CURAND_VERSION': '10.3.0.86', 'MOFED_VERSION': '5.4-rdmacore36.0', 'USERNAME': 'admin', 'TERM': 'xterm', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/opt/tritonserver/bin:/usr/local/mpi/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/ucx/bin:/opt/nvidia/tao', 'FASTRTPS_DEFAULT_PROFILES_FILE': '/usr/local/share/middleware_profiles/rtps_udp_profile.xml', 'CUDA_DRIVER_VERSION': '520.61.03', '_CUDA_COMPAT_STATUS': 'System has unsupported display driver / cuda driver combination (CUDA_ERROR_SYSTEM_DRIVER_MISMATCH) cuInit()=803', 'DISPLAY': ':1', 'NVIDIA_PRODUCT_NAME': 'Triton Server', 'LANG': 'en_US.UTF-8', 'RMW_IMPLEMENTATION': 'rmw_fastrtps_cpp', 'NPP_VERSION': '11.8.0.86', 'ROS_ROOT': '/opt/ros/humble', 'CUFFT_VERSION': '10.9.0.58', 'TF_ENABLE_WINOGRAD_NONFUSED': '1', 'AMENT_PREFIX_PATH': '/opt/ros/humble', 'CUDNN_VERSION': '8.6.0.163', 'NSIGHT_COMPUTE_VERSION': '2022.3.0.22', 'DALI_VERSION': '1.17.0', 'DEBIAN_FRONTEND': 'noninteractive', 'SHELL': '/bin/bash', 'DCGM_VERSION': '2.2.9', 'OPENMPI_VERSION': '4.1.4', 'TRTOSS_VERSION': '', 'OMPI_MCA_coll_hcoll_enable': '0', 'CUSPARSE_VERSION': '11.7.5.86', 'TRITON_SERVER_GPU_ENABLED': '1', 'TRITON_SERVER_VERSION': '2.26.0', 'BASH_ENV': '/etc/bash.bashrc', 'PWD': '/workspaces/isaac_ros-dev/build/gui_teleop', 'PYTHONPATH': '/workspaces/isaac_ros-dev/build/gui_teleop/prefix_override:/workspaces/isaac_ros-dev/install/gui_teleop/lib/python3.8/site-packages:/opt/ros/humble/lib/python3.8/site-packages', '_CUDA_COMPAT_PATH': '/usr/local/cuda/compat', 'TRITON_SERVER_USER': 'triton-server', 'TF_ADJUST_HUE_FUSED': '1', 'NVIDIA_VISIBLE_DEVICES': 'all', 'NCCL_VERSION': '2.15.1', 'USER_GID': '998', 'COLCON': '1', 'OPENUCX_VERSION': '1.14.0', 'HPCX_VERSION': '2.12.1a0', 'SHARP_COLL_ENABLE_CUDA': '0', 'TF_AUTOTUNE_THRESHOLD': '2'}, 'shell': False}
+[0.633255] (vision_pkg) Command: {'cmd': ['/usr/bin/python3', 'setup.py', 'develop', '--editable', '--build-directory', '/workspaces/isaac_ros-dev/build/vision_pkg/build', '--no-deps', 'install_data'], 'cwd': '/workspaces/isaac_ros-dev/build/vision_pkg', 'env': {'DALI_BUILD': '5838886', 'LIBRARY_PATH': '/usr/local/cuda/lib64/stubs:', 'PYTHONWARNINGS': 'ignore:::setuptools.command.install,ignore:::setuptools.command.easy_install,ignore:::pkg_resources', 'USER': 'ckong35', 'TF_ADJUST_SATURATION_FUSED': '1', 'CUSOLVER_VERSION': '11.4.1.48', 'HOSTNAME': 'MEL06486L.me.gatech.edu', 'CUTENSOR_VERSION': '1.6.1.5', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib:/opt/tritonserver/backends/onnxruntime:/usr/local/cuda/compat/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/opt/tritonserver/lib', 'HOME': '/home/admin', 'NVIDIA_TRITON_SERVER_VERSION': '22.09', 'OLDPWD': '/workspaces/isaac_ros-dev/.venv', 'CUDA_CACHE_DISABLE': '1', 'ROS_PYTHON_VERSION': '3', 'USER_UID': '907273', 'ENV': '/etc/shinit_v2', 'RDMACORE_VERSION': '36.0', 'NVJPEG_VERSION': '11.9.0.86', 'NVIDIA_BUILD_ID': '44909143', 'CUDA_VERSION': '11.8.0.062', 'CUBLAS_VERSION': '11.11.3.6', 'NSIGHT_SYSTEMS_VERSION': '2022.3.1.43', 'ROS_DISTRO': 'humble', 'OPAL_PREFIX': '/opt/hpcx/ompi', 'NVIDIA_REQUIRE_CUDA': 'cuda>=9.0', 'TRT_VERSION': '8.5.0.12', 'GDRCOPY_VERSION': '2.3', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'NVIDIA_DRIVER_CAPABILITIES': 'all', 'POLYGRAPHY_VERSION': '0.38.0', 'CURAND_VERSION': '10.3.0.86', 'MOFED_VERSION': '5.4-rdmacore36.0', 'USERNAME': 'admin', 'TERM': 'xterm', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/opt/ros/humble/bin:/opt/tritonserver/bin:/usr/local/mpi/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/ucx/bin:/opt/nvidia/tao', 'FASTRTPS_DEFAULT_PROFILES_FILE': '/usr/local/share/middleware_profiles/rtps_udp_profile.xml', 'CUDA_DRIVER_VERSION': '520.61.03', '_CUDA_COMPAT_STATUS': 'System has unsupported display driver / cuda driver combination (CUDA_ERROR_SYSTEM_DRIVER_MISMATCH) cuInit()=803', 'DISPLAY': ':1', 'NVIDIA_PRODUCT_NAME': 'Triton Server', 'LANG': 'en_US.UTF-8', 'RMW_IMPLEMENTATION': 'rmw_fastrtps_cpp', 'NPP_VERSION': '11.8.0.86', 'ROS_ROOT': '/opt/ros/humble', 'CUFFT_VERSION': '10.9.0.58', 'TF_ENABLE_WINOGRAD_NONFUSED': '1', 'AMENT_PREFIX_PATH': '/opt/ros/humble', 'CUDNN_VERSION': '8.6.0.163', 'NSIGHT_COMPUTE_VERSION': '2022.3.0.22', 'DALI_VERSION': '1.17.0', 'DEBIAN_FRONTEND': 'noninteractive', 'SHELL': '/bin/bash', 'DCGM_VERSION': '2.2.9', 'OPENMPI_VERSION': '4.1.4', 'TRTOSS_VERSION': '', 'OMPI_MCA_coll_hcoll_enable': '0', 'CUSPARSE_VERSION': '11.7.5.86', 'TRITON_SERVER_GPU_ENABLED': '1', 'TRITON_SERVER_VERSION': '2.26.0', 'BASH_ENV': '/etc/bash.bashrc', 'PWD': '/workspaces/isaac_ros-dev/build/vision_pkg', 'PYTHONPATH': '/workspaces/isaac_ros-dev/build/vision_pkg/prefix_override:/workspaces/isaac_ros-dev/install/vision_pkg/lib/python3.8/site-packages:/opt/ros/humble/lib/python3.8/site-packages', '_CUDA_COMPAT_PATH': '/usr/local/cuda/compat', 'TRITON_SERVER_USER': 'triton-server', 'TF_ADJUST_HUE_FUSED': '1', 'NVIDIA_VISIBLE_DEVICES': 'all', 'NCCL_VERSION': '2.15.1', 'USER_GID': '998', 'COLCON': '1', 'OPENUCX_VERSION': '1.14.0', 'HPCX_VERSION': '2.12.1a0', 'SHARP_COLL_ENABLE_CUDA': '0', 'TF_AUTOTUNE_THRESHOLD': '2'}, 'shell': False}
+[0.702259] (-) TimerEvent: {}
+[0.779884] (gui_teleop) StdoutLine: {'line': b'running develop\n'}
+[0.786276] (vision_pkg) StdoutLine: {'line': b'running develop\n'}
+[0.802437] (-) TimerEvent: {}
+[0.874018] (gui_teleop) StdoutLine: {'line': b'running egg_info\n'}
+[0.874140] (gui_teleop) StdoutLine: {'line': b'creating gui_teleop.egg-info\n'}
+[0.878112] (vision_pkg) StdoutLine: {'line': b'running egg_info\n'}
+[0.878186] (vision_pkg) StdoutLine: {'line': b'creating vision_pkg.egg-info\n'}
+[0.878925] (gui_teleop) StdoutLine: {'line': b'writing gui_teleop.egg-info/PKG-INFO\n'}
+[0.879116] (gui_teleop) StdoutLine: {'line': b'writing dependency_links to gui_teleop.egg-info/dependency_links.txt\n'}
+[0.879282] (gui_teleop) StdoutLine: {'line': b'writing entry points to gui_teleop.egg-info/entry_points.txt\n'}
+[0.879324] (gui_teleop) StdoutLine: {'line': b'writing requirements to gui_teleop.egg-info/requires.txt\n'}
+[0.879349] (gui_teleop) StdoutLine: {'line': b'writing top-level names to gui_teleop.egg-info/top_level.txt\n'}
+[0.879375] (gui_teleop) StdoutLine: {'line': b"writing manifest file 'gui_teleop.egg-info/SOURCES.txt'\n"}
+[0.883017] (vision_pkg) StdoutLine: {'line': b'writing vision_pkg.egg-info/PKG-INFO\n'}
+[0.883117] (vision_pkg) StdoutLine: {'line': b'writing dependency_links to vision_pkg.egg-info/dependency_links.txt\n'}
+[0.883177] (vision_pkg) StdoutLine: {'line': b'writing entry points to vision_pkg.egg-info/entry_points.txt\n'}
+[0.883206] (vision_pkg) StdoutLine: {'line': b'writing requirements to vision_pkg.egg-info/requires.txt\n'}
+[0.883231] (vision_pkg) StdoutLine: {'line': b'writing top-level names to vision_pkg.egg-info/top_level.txt\n'}
+[0.883256] (vision_pkg) StdoutLine: {'line': b"writing manifest file 'vision_pkg.egg-info/SOURCES.txt'\n"}
+[0.889431] (gui_teleop) StdoutLine: {'line': b"reading manifest file 'gui_teleop.egg-info/SOURCES.txt'\n"}
+[0.889646] (gui_teleop) StdoutLine: {'line': b"writing manifest file 'gui_teleop.egg-info/SOURCES.txt'\n"}
+[0.893632] (vision_pkg) StdoutLine: {'line': b"reading manifest file 'vision_pkg.egg-info/SOURCES.txt'\n"}
+[0.893849] (vision_pkg) StdoutLine: {'line': b"writing manifest file 'vision_pkg.egg-info/SOURCES.txt'\n"}
+[0.895225] (gui_teleop) StdoutLine: {'line': b'running build_ext\n'}
+[0.895293] (gui_teleop) StdoutLine: {'line': b'Creating /workspaces/isaac_ros-dev/install/gui_teleop/lib/python3.8/site-packages/gui-teleop.egg-link (link to .)\n'}
+[0.895613] (gui_teleop) StdoutLine: {'line': b'Installing gui_teleop_7dof script to /workspaces/isaac_ros-dev/install/gui_teleop/lib/gui_teleop\n'}
+[0.895736] (gui_teleop) StdoutLine: {'line': b'\n'}
+[0.895770] (gui_teleop) StdoutLine: {'line': b'Installed /workspaces/isaac_ros-dev/build/gui_teleop\n'}
+[0.895796] (gui_teleop) StdoutLine: {'line': b'running install_data\n'}
+[0.895824] (gui_teleop) StdoutLine: {'line': b'creating /workspaces/isaac_ros-dev/install/gui_teleop/share/ament_index\n'}
+[0.895850] (gui_teleop) StdoutLine: {'line': b'creating /workspaces/isaac_ros-dev/install/gui_teleop/share/ament_index/resource_index\n'}
+[0.895874] (gui_teleop) StdoutLine: {'line': b'creating /workspaces/isaac_ros-dev/install/gui_teleop/share/ament_index/resource_index/packages\n'}
+[0.895899] (gui_teleop) StdoutLine: {'line': b'copying resource/gui_teleop -> /workspaces/isaac_ros-dev/install/gui_teleop/share/ament_index/resource_index/packages\n'}
+[0.896108] (gui_teleop) StdoutLine: {'line': b'copying package.xml -> /workspaces/isaac_ros-dev/install/gui_teleop/share/gui_teleop\n'}
+[0.899393] (vision_pkg) StdoutLine: {'line': b'running build_ext\n'}
+[0.899471] (vision_pkg) StdoutLine: {'line': b'Creating /workspaces/isaac_ros-dev/install/vision_pkg/lib/python3.8/site-packages/vision-pkg.egg-link (link to .)\n'}
+[0.899646] (vision_pkg) StdoutLine: {'line': b'Installing img_pub script to /workspaces/isaac_ros-dev/install/vision_pkg/lib/vision_pkg\n'}
+[0.900062] (vision_pkg) StdoutLine: {'line': b'\n'}
+[0.900113] (vision_pkg) StdoutLine: {'line': b'Installed /workspaces/isaac_ros-dev/build/vision_pkg\n'}
+[0.900141] (vision_pkg) StdoutLine: {'line': b'running install_data\n'}
+[0.900167] (vision_pkg) StdoutLine: {'line': b'creating /workspaces/isaac_ros-dev/install/vision_pkg/share/ament_index\n'}
+[0.900193] (vision_pkg) StdoutLine: {'line': b'creating /workspaces/isaac_ros-dev/install/vision_pkg/share/ament_index/resource_index\n'}
+[0.900218] (vision_pkg) StdoutLine: {'line': b'creating /workspaces/isaac_ros-dev/install/vision_pkg/share/ament_index/resource_index/packages\n'}
+[0.900242] (vision_pkg) StdoutLine: {'line': b'copying resource/vision_pkg -> /workspaces/isaac_ros-dev/install/vision_pkg/share/ament_index/resource_index/packages\n'}
+[0.900267] (vision_pkg) StdoutLine: {'line': b'copying package.xml -> /workspaces/isaac_ros-dev/install/vision_pkg/share/vision_pkg\n'}
+[0.902583] (-) TimerEvent: {}
+[0.915268] (gui_teleop) CommandEnded: {'returncode': 0}
+[0.946766] (gui_teleop) JobEnded: {'identifier': 'gui_teleop', 'rc': 0}
+[0.947409] (vision_pkg) CommandEnded: {'returncode': 0}
+[0.966063] (vision_pkg) JobEnded: {'identifier': 'vision_pkg', 'rc': 0}
+[0.966381] (-) EventReactorShutdown: {}

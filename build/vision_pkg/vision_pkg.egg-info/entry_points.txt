@@ -1,0 +1,2 @@
+[console_scripts]
+img_pub = vision_pkg.camera_pub:main
