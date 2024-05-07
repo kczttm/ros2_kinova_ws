@@ -1,0 +1,2 @@
+[console_scripts]
+gui_teleop_7dof = gui_teleop.kinova_7dof_teleop:main
