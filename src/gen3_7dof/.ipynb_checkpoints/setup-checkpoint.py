@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'vision_pkg'
+package_name = 'gen3_7dof'
 
 data_files=[
     ('share/ament_index/resource_index/packages',
@@ -32,21 +32,22 @@ def package_files(data_files, directory_list):
 
     return data_files
 
+
 setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
-    data_files = package_files(data_files, ['launch/', 'config/']),
+    data_files = package_files(data_files, ['launch/']),
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='C. Kong',
+    maintainer='ckong35',
     maintainer_email='ckong35@gatech.edu',
     description='TODO: Package description',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'img_pub = vision_pkg.camera_pub:main',
+            'chase_controller = gen3_7dof.chase_controller:main',
         ],
     },
 )

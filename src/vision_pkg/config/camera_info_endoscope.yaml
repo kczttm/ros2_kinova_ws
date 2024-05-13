@@ -1,0 +1,26 @@
+image_width: 1600
+image_height: 1200
+camera_name: endoscope
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [1170.28807,    0.     ,  817.27102,
+            0.     , 1173.0413 ,  599.53575,
+            0.     ,    0.     ,    1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.048430, -0.093932, -0.003760, -0.004636, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1., 0., 0.,
+         0., 1., 0.,
+         0., 0., 1.]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [1172.76404,    0.     ,  809.50245,    0.     ,
+            0.     , 1181.72009,  595.18256,    0.     ,
+            0.     ,    0.     ,    1.     ,    0.     ]

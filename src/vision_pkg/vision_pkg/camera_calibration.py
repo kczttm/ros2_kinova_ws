@@ -48,10 +48,10 @@ def fetching_from_camera(data_path):
     imgpoints = [] # 2d points in image plane.
     total_img = 0
 
-    cap = cv.VideoCapture(4,cv.CAP_V4L2)
+    cap = cv.VideoCapture(2,cv.CAP_V4L2)
     # cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-    # width = 1280
-    # height = 480
+    # width = 1920
+    # height = 1080
     # cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
     # cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
     if not cap.isOpened():
