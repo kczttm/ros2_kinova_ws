@@ -9,7 +9,7 @@ np.set_printoptions(suppress=True)
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Pose
-from .tool_box import TCPArguments, getRotMtx, R2rot, quaternion_to_euler  
+from .tool_box import TCPArguments, getRotMtx, R2rot, quaternion_to_euler, euler_to_quaternion  
 
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
@@ -43,14 +43,14 @@ class ChaseController(Node):
         
         self.pos_sub = self.create_subscription(
             Pose,
-            'desired_pose_topic',
+            'gen3_7dof/desired_pose_topic',
             self.desired_pose_callback,
             10)
         self.pos_sub  # prevent unused variable warning
         
         self.feedback_period = 0.025  # 40 Hz high-level control loop freq
         self.timer = self.create_timer(self.feedback_period, self.move_to_pose)
-        # self.pos_pub = self.create_publisher(Pose
+        self.pos_pub = self.create_publisher(Pose,'gen3_7dof/feedback_pose_topic',10)
         
         # assign initial desired pose as current pose
         self.desired_pose = base.GetMeasuredCartesianPose()
@@ -77,7 +77,8 @@ class ChaseController(Node):
         self.desired_pose.z = msg.position.z
 
         # convert orientation
-        ori_rpy = quaternion_to_euler(msg.orientation)
+        quat = np.array([msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w])
+        ori_rpy = quaternion_to_euler(quat)
         self.desired_pose.theta_x = ori_rpy[0] * 180 / np.pi
         self.desired_pose.theta_y = ori_rpy[1] * 180 / np.pi
         self.desired_pose.theta_z = ori_rpy[2] * 180 / np.pi
@@ -87,12 +88,24 @@ class ChaseController(Node):
     def move_to_pose(self):
         current_pose = self.base.GetMeasuredCartesianPose()
         R = getRotMtx(current_pose)
+        th_x_rad, th_y_rad, th_z_rad = current_pose.theta_x*np.pi/180, current_pose.theta_y*np.pi/180, current_pose.theta_z*np.pi/180
+        current_quat = euler_to_quaternion(th_x_rad, th_y_rad, th_z_rad)
+        # publish feedback pose
+        feedback_pose = Pose()
+        feedback_pose.position.x = current_pose.x
+        feedback_pose.position.y = current_pose.y
+        feedback_pose.position.z = current_pose.z
+        feedback_pose.orientation.x = current_quat[0]
+        feedback_pose.orientation.y = current_quat[1]
+        feedback_pose.orientation.z = current_quat[2]
+        feedback_pose.orientation.w = current_quat[3]
+        self.pos_pub.publish(feedback_pose)
 
         # reducing the pos error (in global frame!!)
         pos_diff = np.array([self.desired_pose.x-current_pose.x,
                              self.desired_pose.y-current_pose.y,
                              self.desired_pose.z-current_pose.z])
-        pos_diff_norm = np.linalg.norm(pos_diff)
+        pos_diff_norm = np.linalg.norm(pos_diff)+1e-5
         v_temp = self.max_vel * pos_diff/pos_diff_norm
 
         # reducing ang error using ER = RRd^T
@@ -110,9 +123,11 @@ class ChaseController(Node):
         reached = pos_diff_norm < self.eps_pos and eR2_norm < self.eps_ang
         
         if reached:
-            print("Goal Pose reached")
+            # print("Goal Pose reached")
             self.base.Stop()
         else: 
+            # print the current error
+            self.get_logger().info('pos_diff_norm: %f, eR2_norm: %f' % (pos_diff_norm, eR2_norm))
             # go in max vel when outside dcc_range
             if pos_diff_norm < self.dcc_range:
                 v = self.kp_pos * pos_diff

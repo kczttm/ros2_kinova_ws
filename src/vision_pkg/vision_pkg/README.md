@@ -55,3 +55,14 @@ projection
 0.000000 1181.720093 595.182563 0.000000
 0.000000 0.000000 1.000000 0.000000
 ```
+
+# Run the Apriltag 6D Pose Pub
+## In the first terminal
+```
+ros2 launch vision_pkg isaac_ros_apriltag_endoscope.launch.py
+```
+
+## In the second terminal
+```
+rviz2 -d /workspaces/isaac_ros-dev/src/isaac_ros_apriltag/isaac_ros_apriltag/rviz/usb_cam.rviz
+```

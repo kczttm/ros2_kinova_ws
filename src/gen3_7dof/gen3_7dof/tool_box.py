@@ -95,6 +95,33 @@ def euler_to_rotation_matrix(roll, pitch, yaw):
     return rotation_matrix
 
 
+def euler_to_quaternion(roll, pitch, yaw):
+    """
+    Convert Euler angles to quaternion.
+    
+    Args:
+        roll (float): Roll angle in radians.
+        pitch (float): Pitch angle in radians.
+        yaw (float): Yaw angle in radians.
+    
+    Returns:
+        numpy.array: Quaternion in the form [x, y, z, w].
+    """
+    cy = np.cos(yaw * 0.5)
+    sy = np.sin(yaw * 0.5)
+    cp = np.cos(pitch * 0.5)
+    sp = np.sin(pitch * 0.5)
+    cr = np.cos(roll * 0.5)
+    sr = np.sin(roll * 0.5)
+
+    w = cy * cp * cr + sy * sp * sr
+    x = cy * cp * sr - sy * sp * cr
+    y = sy * cp * sr + cy * sp * cr
+    z = sy * cp * cr - cy * sp * sr
+
+    return [x, y, z, w]
+
+
 def quaternion_to_euler(quaternion):
     """
     Convert quaternion to Euler angles (roll, pitch, yaw).
