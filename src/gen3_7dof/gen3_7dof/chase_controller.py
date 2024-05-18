@@ -8,8 +8,11 @@ np.set_printoptions(suppress=True)
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Pose
-from .tool_box import TCPArguments, getRotMtx, R2rot, quaternion_to_euler, euler_to_quaternion  
+from geometry_msgs.msg import Pose, TransformStamped
+from tf2_ros import TransformBroadcaster
+#from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
+
+from .tool_box import TCPArguments, getRotMtx, R2rot, quaternion_to_euler, euler_to_quaternion, get_endoscope_tf_from_yaml 
 
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
@@ -20,7 +23,8 @@ from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 
 class ChaseController(Node):
     def __init__(self, base):
-        super().__init__('chase_controller')
+        super().__init__('chase_controller_node')
+        ## Kortex API declarations
         self.base = base
         # Make sure the arm is in Single Level Servoing mode (high-level mode)
         base_servo_mode = Base_pb2.ServoingModeInformation()
@@ -41,17 +45,27 @@ class ChaseController(Node):
         self.twist.angular_y = 0.0
         self.twist.angular_z = 0.0  # adjust angular velocity
         
+        ## ROS2 Nodes declarations
         self.pos_sub = self.create_subscription(
             Pose,
-            'gen3_7dof/desired_pose_topic',
+            'gen3_7dof/desired_EE_pose_topic',
             self.desired_pose_callback,
             10)
         self.pos_sub  # prevent unused variable warning
         
         self.feedback_period = 0.025  # 40 Hz high-level control loop freq
         self.timer = self.create_timer(self.feedback_period, self.move_to_pose)
-        self.pos_pub = self.create_publisher(Pose,'gen3_7dof/feedback_pose_topic',10)
+        self.pos_pub = self.create_publisher(Pose,'gen3_7dof/EE_pose_topic',10)
         
+        ## ROS2 TF declarations
+        self.tf_br = TransformBroadcaster(self)
+
+        # Post Static TF from EE to Endoscope
+        self.static_tf = get_endoscope_tf_from_yaml()
+        #static_tf_br = StaticTransformBroadcaster(self)
+        #static_tf_br.sendTransform(static_tf)
+        
+        ## Control Parameters
         # assign initial desired pose as current pose
         self.desired_pose = base.GetMeasuredCartesianPose()
         self.R_d = getRotMtx(self.desired_pose)
@@ -84,10 +98,9 @@ class ChaseController(Node):
         self.desired_pose.theta_z = ori_rpy[2] * 180 / np.pi
         self.R_d = getRotMtx(self.desired_pose)
 
-
-    def move_to_pose(self):
-        current_pose = self.base.GetMeasuredCartesianPose()
-        R = getRotMtx(current_pose)
+    
+    def broadcast_pose_and_tf(self, current_pose):
+        # Broadcast the transform from the base frame to the end-effector frame
         th_x_rad, th_y_rad, th_z_rad = current_pose.theta_x*np.pi/180, current_pose.theta_y*np.pi/180, current_pose.theta_z*np.pi/180
         current_quat = euler_to_quaternion(th_x_rad, th_y_rad, th_z_rad)
         # publish feedback pose
@@ -100,6 +113,31 @@ class ChaseController(Node):
         feedback_pose.orientation.z = current_quat[2]
         feedback_pose.orientation.w = current_quat[3]
         self.pos_pub.publish(feedback_pose)
+
+        # broadcast tf
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = "world"
+        t.child_frame_id = "end_effector"
+        t.transform.translation.x = current_pose.x
+        t.transform.translation.y = current_pose.y
+        t.transform.translation.z = current_pose.z
+        t.transform.rotation.x = current_quat[0]
+        t.transform.rotation.y = current_quat[1]
+        t.transform.rotation.z = current_quat[2]
+        t.transform.rotation.w = current_quat[3]
+        self.tf_br.sendTransform(t)
+
+        # send static tf from end_effector to endoscope
+        self.static_tf.header.stamp = self.get_clock().now().to_msg()
+        self.tf_br.sendTransform(self.static_tf)
+
+
+    def move_to_pose(self):
+        current_pose = self.base.GetMeasuredCartesianPose()
+        R = getRotMtx(current_pose)
+        
+        self.broadcast_pose_and_tf(current_pose)
 
         # reducing the pos error (in global frame!!)
         pos_diff = np.array([self.desired_pose.x-current_pose.x,

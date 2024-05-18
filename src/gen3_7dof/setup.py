@@ -32,12 +32,11 @@ def package_files(data_files, directory_list):
 
     return data_files
 
-
 setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
-    data_files = package_files(data_files, ['launch/']),
+    data_files = package_files(data_files, ['launch/', 'config/']),
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ckong35',
@@ -47,7 +46,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'chase_controller = gen3_7dof.chase_controller:main',
+            'chase_controller_node = gen3_7dof.chase_controller:main',
+            'apriltag_follower_node = gen3_7dof.apriltag_follower:main'
         ],
     },
 )

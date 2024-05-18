@@ -1,16 +1,193 @@
+import os, yaml, time, threading
+import numpy as np
+
+from geometry_msgs.msg import TransformStamped
+
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
 from kortex_api.autogen.client_stubs.ControlConfigClientRpc import ControlConfigClient
-
 from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
-
-import numpy as np
 
 class TCPArguments:
     def __init__(self):
         self.ip = "192.168.1.10"
         self.username = "admin"
         self.password = "admin"
+
+
+def get_inverse_tf(tf):
+    """
+    Get the inverse of a TransformStamped message.
+    
+    Args:
+        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
+    
+    Returns:
+        geometry_msgs.msg.TransformStamped: Inverse of the input TransformStamped message.
+    """
+    p, q = tf_to_vectors(tf)
+    inv_q = [-q[0], -q[1], -q[2], q[3]]
+    inv_p = -quaternion_rotate_vector(inv_q, p)
+    inv_tf = TransformStamped()
+    inv_tf.header.frame_id = tf.child_frame_id
+    inv_tf.child_frame_id = tf.header.frame_id
+    inv_tf.transform.translation.x = inv_p[0]
+    inv_tf.transform.translation.y = inv_p[1]
+    inv_tf.transform.translation.z = inv_p[2]
+    inv_tf.transform.rotation.x = inv_q[0]
+    inv_tf.transform.rotation.y = inv_q[1]
+    inv_tf.transform.rotation.z = inv_q[2]
+    inv_tf.transform.rotation.w = inv_q[3]
+    return inv_tf
+
+
+def tf_to_vectors(tf):
+    """
+    Convert a TransformStamped message to position and quaternion vectors.
+    
+    Args:
+        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
+    
+    Returns:
+        numpy.array: Position vector [x, y, z].
+        numpy.array: Orientation vector [qx,qy,qz,qw].
+    """
+    # Extract the position from the TransformStamped message
+    pos = np.array([
+        tf.transform.translation.x,
+        tf.transform.translation.y,
+        tf.transform.translation.z
+    ])
+    
+    # Extract the orientation from the TransformStamped message
+    q = np.array([
+        tf.transform.rotation.x,
+        tf.transform.rotation.y,
+        tf.transform.rotation.z,
+        tf.transform.rotation.w
+    ])
+    return pos, q
+
+
+def quaternion_rotate_vector(q, v):
+    """
+    Rotate a vector using a quaternion.
+    
+    Args:
+        q (numpy.array): Quaternion in the form [x, y, z, w].
+        v (numpy.array): Vector to rotate.
+    
+    Returns:
+        numpy.array: Rotated vector.
+    """
+    vq = np.array([v[0], v[1], v[2], 0])
+    q_inv = np.array([-q[0], -q[1], -q[2], q[3]])
+    return quaternion_multiply(quaternion_multiply(q, vq), q_inv)[:3]
+
+
+def quaternion_multiply(q1, q2):
+    x1, y1, z1, w1 = q1
+    x2, y2, z2, w2 = q2
+    
+    w3 = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    x3 = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y3 = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+    z3 = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+    
+    return np.array([x3, y3, z3, w3])
+
+
+def tf_to_rot_mtx(tf):
+    """
+    Convert a TransformStamped message to a 3x3 rotation matrix.
+    
+    Args:
+        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
+    
+    Returns:
+        numpy.array: 3x3 rotation matrix.
+    """
+    # Extract the quaternion from the TransformStamped message
+    q = [tf.transform.rotation.x, tf.transform.rotation.y,
+         tf.transform.rotation.z, tf.transform.rotation.w]
+    
+    # Compute the rotation matrix from the quaternion
+    ori_rpy = quaternion_to_euler(q)
+    R = euler_to_rotation_matrix(ori_rpy[0], ori_rpy[1], ori_rpy[2])
+    
+    return R
+
+
+def get_endoscope_tf_from_yaml():
+    """
+    Get the endoscope to EE transformation from a yaml file.
+    If the file doesn't exist, use a default transformation. 
+    The output is a TransformStamped message.   
+    """
+    pkg_dir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),'..'))
+    config_dir = os.path.join(pkg_dir, 'config/')
+    fname = "endoscope_from_ee.yaml"
+    
+    try:
+        with open(config_dir+fname, "r") as file:
+            data = yaml.safe_load(file)
+
+    except FileNotFoundError:
+        print("File not found. Using default transformation.")
+        # camera frame is 180 degree rotated around z axis of end effector frame
+        # camera origin is 0.11m away from the end effector +z axis
+        # camera origin is 0.05m away from the end effector -y axis
+        data = {
+            "header": {
+                "frame_id": "end_effector"
+            },
+            "child_frame_id": "endoscope",
+            "transform": {
+                "translation": {
+                    "x": 0.0,
+                    "y": -0.05,
+                    "z": 0.11
+                },
+                "rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 1.0, 
+                    "w": 0.0
+                }
+            }
+        }
+        with open(config_dir+fname, "w") as file:
+            yaml.safe_dump(data, file)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+    endoscope_tf = TransformStamped()
+    endoscope_tf.header.frame_id = data["header"]["frame_id"]
+    endoscope_tf.child_frame_id = data["child_frame_id"]
+    endoscope_tf.transform.translation.x = data["transform"]["translation"]["x"]
+    endoscope_tf.transform.translation.y = data["transform"]["translation"]["y"]
+    endoscope_tf.transform.translation.z = data["transform"]["translation"]["z"]
+    endoscope_tf.transform.rotation.x = data["transform"]["rotation"]["x"]
+    endoscope_tf.transform.rotation.y = data["transform"]["rotation"]["y"]
+    endoscope_tf.transform.rotation.z = data["transform"]["rotation"]["z"]
+    endoscope_tf.transform.rotation.w = data["transform"]["rotation"]["w"]
+    return endoscope_tf
+
+
+def get_desired_endoscope_pose_from_tag():
+    ## Need to add time stamp and parent frame id
+    desired_endo = TransformStamped()
+    desired_endo.child_frame_id = "desired_endoscope"
+    desired_endo.transform.translation.x = 0.0
+    desired_endo.transform.translation.y = 0.0
+    desired_endo.transform.translation.z = -0.2 # 10cm above the tag
+    desired_endo.transform.rotation.x = 0.0
+    desired_endo.transform.rotation.y = 0.0 
+    desired_endo.transform.rotation.z = 0.0     
+    desired_endo.transform.rotation.w = 1.0  # no rotation
+    return desired_endo
+
+
 
 def check_for_end_or_abort(e):
     """Return a closure checking for END or ABORT notifications
@@ -29,6 +206,7 @@ def check_for_end_or_abort(e):
 
 
 def example_move_to_home_position(base):
+    TIMEOUT_DURATION = 10  # in seconds
     # Make sure the arm is in Single Level Servoing mode (high-level mode)
     base_servo_mode = Base_pb2.ServoingModeInformation()
     base_servo_mode.servoing_mode = Base_pb2.SINGLE_LEVEL_SERVOING
