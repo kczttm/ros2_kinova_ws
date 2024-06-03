@@ -1,0 +1,35 @@
+# Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+#
+# edited by Chuizheng Kong 
+# on 05/07/2024
+
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Install kinova kortex driver
+RUN python3 -m pip install \
+        protobuf==3.20 deprecated==1.2.7 \
+        --no-cache-dir https://artifactory.kinovaapps.com/artifactory/generic-public/kortex/API/2.6.0/kortex_api-2.6.0.post3-py3-none-any.whl --no-deps \
+        jupyterlab \
+        tk
+
+# # add additonal lines into .bashrc  not working need fix
+# RUN echo "source /workspaces/isaac_ros-dev/src/ros2_kinova_ws/install/setup.bash" >> /root/.bashrc \
+#     && echo "source /workspaces/isaac_ros-dev/src/ros2_kortex_ws/install/setup.bash" >> /root/.bashrc \ 
+#     && alias sb='source /root/.bashrc'  \
+#     && alias cb='colcon build --symlink-install' 
+
+
+RUN apt-get update && apt-get install -y \
+        mlocate \
+        ros-humble-usb-cam \
+        ros-humble-isaac-ros-apriltag
+
+
+# RUN rosdep install --ignore-src --from-paths src -y -r

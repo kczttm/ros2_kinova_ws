@@ -42,7 +42,10 @@ def generate_launch_description():
         plugin='nvidia::isaac_ros::apriltag::AprilTagNode',
         name='apriltag',
         namespace='',
-        remappings=[('/image', '/image_rect')]
+        remappings=[('/image', '/image_rect')],
+        parameters=[{
+            'size': 0.0315,
+        }]
     )
 
     usb_cam_params_path = os.path.join(

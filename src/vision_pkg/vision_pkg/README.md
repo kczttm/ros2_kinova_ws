@@ -66,3 +66,8 @@ ros2 launch vision_pkg isaac_ros_apriltag_endoscope.launch.py
 ```
 rviz2 -d /workspaces/isaac_ros-dev/src/isaac_ros_apriltag/isaac_ros_apriltag/rviz/usb_cam.rviz
 ```
+
+## To change apriltag size after printing the tag
+```
+vim src/isaac_ros_apriltag/isaac_ros_apriltag/src/apriltag_node.cpp
+```

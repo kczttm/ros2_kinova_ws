@@ -180,7 +180,7 @@ def get_desired_endoscope_pose_from_tag():
     desired_endo.child_frame_id = "desired_endoscope"
     desired_endo.transform.translation.x = 0.0
     desired_endo.transform.translation.y = 0.0
-    desired_endo.transform.translation.z = -0.2 # 10cm above the tag
+    desired_endo.transform.translation.z = -0.1 # 10cm above the tag
     desired_endo.transform.rotation.x = 0.0
     desired_endo.transform.rotation.y = 0.0 
     desired_endo.transform.rotation.z = 0.0     

@@ -1,0 +1,2 @@
+CONFIG_IMAGE_KEY="ros2_humble.gen3_7dof"
+CONFIG_DOCKER_SEARCH_DIRS=(~/workspaces/isaac_ros-dev/src/ros2_kinova_ws)
