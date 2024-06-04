@@ -32,4 +32,8 @@ RUN apt-get update && apt-get install -y \
         ros-humble-isaac-ros-apriltag
 
 
+# Remove setuptools_scm due to bug:
+# ERROR setuptools_scm._file_finders.git listing git files failed - pretending there aren't any
+RUN python3 -m pip uninstall -y setuptools_scm
+
 # RUN rosdep install --ignore-src --from-paths src -y -r

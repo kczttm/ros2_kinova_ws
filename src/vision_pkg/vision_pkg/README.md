@@ -68,6 +68,5 @@ rviz2 -d /workspaces/isaac_ros-dev/src/isaac_ros_apriltag/isaac_ros_apriltag/rvi
 ```
 
 ## To change apriltag size after printing the tag
-```
-vim src/isaac_ros_apriltag/isaac_ros_apriltag/src/apriltag_node.cpp
-```
+Navigate to [`isaac_ros_apriltag_endoscope.launch.py`](/src/vision_pkg/launch/isaac_ros_apriltag_endoscope.launch.py).
+Edit the field `size` under the `apriltag_node`
