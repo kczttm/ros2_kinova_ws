@@ -41,3 +41,14 @@ source /workspaces/isaac_ros-dev/install/setup.bash && \
 
 ### [vision_pkg](/src/vision_pkg/vision_pkg/README.md)
 This package demonstrate the way to calibrate usb_cam using ROS2 
+
+## Common bug and Solutions
+### GPU memory occupied by prior application on host computer
+```
+ERROR gxf/std/unbounded_allocator.cpp@58: Failure in cudaMalloc. cuda_error: cudaErrorUnknown, error_str: unknown error
+```
+
+Potential Solution: Restart the nvidia_uvm module
+```
+sudo modprobe -r nvidia_uvm && sudo modprobe nvidia_uvm
+```
