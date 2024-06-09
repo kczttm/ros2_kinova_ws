@@ -7,7 +7,7 @@ ros2 run gen3_7dof chase_controller
 
 open a new terminal:
 ```
-ros2 topic echo /gen3_7dof/feedback_pose_topic
+ros2 topic echo /gen3_7dof/EE_pose_topic --once
 ```
 
 suppose we get:
