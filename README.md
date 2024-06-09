@@ -48,7 +48,12 @@ This package demonstrate the way to calibrate usb_cam using ROS2
 ERROR gxf/std/unbounded_allocator.cpp@58: Failure in cudaMalloc. cuda_error: cudaErrorUnknown, error_str: unknown error
 ```
 
-Potential Solution: Restart the nvidia_uvm module
+Potential Solution: Restart the nvidia_uvm module from [Andre_NG on reddit](https://www.reddit.com/r/VFIO/comments/15b0z78/comment/kofs4t3/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button)
+1. Identify the processes using the "nvidia_uvm" module. in terminal run `fuser -v /dev/nvidia*` This will display the processes using the NVIDIA GPU. (In my case, it was pt_main_thread which was from running main.ipynb)
+
+2. Once you identify the processes, you can either stop those processes (run "Restart" button on top) or terminate them. `sudo kill -9 123` (<-- EXAMPLE for process with ID 123)
+
+3. After terminating the processes, run:
 ```
 sudo modprobe -r nvidia_uvm && sudo modprobe nvidia_uvm
 ```
