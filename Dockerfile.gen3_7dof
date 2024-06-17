@@ -12,12 +12,15 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
+# Remove setuptools_scm due to bug:
+# ERROR setuptools_scm._file_finders.git listing git files failed - pretending there aren't any
+RUN python3 -m pip uninstall -y setuptools_scm
+
 # Install kinova kortex driver
 RUN python3 -m pip install \
         protobuf==3.20 deprecated==1.2.7 \
-        --no-cache-dir https://artifactory.kinovaapps.com/artifactory/generic-public/kortex/API/2.6.0/kortex_api-2.6.0.post3-py3-none-any.whl --no-deps \
-        jupyterlab \
-        tk
+        --no-cache-dir https://artifactory.kinovaapps.com/artifactory/generic-public/kortex/API/2.6.0/kortex_api-2.6.0.post3-py3-none-any.whl --no-deps
+
 
 # # add additonal lines into .bashrc  not working need fix
 # RUN echo "source /workspaces/isaac_ros-dev/src/ros2_kinova_ws/install/setup.bash" >> /root/.bashrc \
@@ -31,9 +34,9 @@ RUN apt-get update && apt-get install -y \
         ros-humble-usb-cam \
         ros-humble-isaac-ros-apriltag
 
+RUN python3 -m pip install \
+        jupyterlab \
+        tk
 
-# Remove setuptools_scm due to bug:
-# ERROR setuptools_scm._file_finders.git listing git files failed - pretending there aren't any
-RUN python3 -m pip uninstall -y setuptools_scm
 
 # RUN rosdep install --ignore-src --from-paths src -y -r

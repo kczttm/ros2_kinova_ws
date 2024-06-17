@@ -50,12 +50,13 @@ def main(args=None):
     rclpy.shutdown()
 
 if __name__ == '__main__':
-    cap = cv2.VideoCapture(2,cv2.CAP_V4L2)
+    cap = cv2.VideoCapture(4,cv2.CAP_V4L2)
     # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-    # width = 1920
-    # height = 1080
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    
+    width = 1920
+    height = 1080
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     if not cap.isOpened():
         print("Cannot open camera")
         exit()

@@ -137,8 +137,9 @@ def intrinsic_cam_para():
     
     # load saved intrinsic parameters
     fname = "camera_calib_intrinsic.npy"
-    mtx_path = os.path.join(os.getcwd(), 'calibrationData/')
-    with open(mtx_path+fname, 'rb') as file:
+    mtx_path = os.path.abspath(os.path.join(os.path.abspath(__file__),
+                                            os.pardir, 'calibrationData',fname))
+    with open(mtx_path, 'rb') as file:
         mtx = np.load(file)
         dist = np.load(file)
     return mtx, dist
@@ -498,35 +499,39 @@ def leave_one_out_reprojection_error():
 
 if __name__ == "__main__":
     np.set_printoptions(suppress=True)
-    data_path = os.path.join(os.getcwd(),'calibrationData','camera_calibration')
-    calib_path = os.path.join(os.getcwd(),'calibrationData')
+    # current_path = os.path.abspath(__file__)
+    # data_path = os.path.join(current_path,'calibrationData','camera_calibration')
+    # calib_path = os.path.join(current_path,'calibrationData')
 
-    # obtain calibration images
-    # objpoints, imgpoints, frame = fetching_from_camera(data_path)
-    objpoints, imgpoints, frame = fetching_from_file(data_path)
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    # # obtain calibration images
+    # # objpoints, imgpoints, frame = fetching_from_camera(data_path)
+    # objpoints, imgpoints, frame = fetching_from_file(data_path)
+    # gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     
-    # obtain camera matrix, distorion factor
-    ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+    # # obtain camera matrix, distorion factor
+    # ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+    # print('camera matrix: \n', mtx, '\ndistortion: \n', dist)
+
+    # # save the intrinsic calibrated parameters
+    # fname = "camera_calib_intrinsic.npy"
+    # mtx_path = os.path.join(os.getcwd(), 'calibrationData/')
+    # with open(mtx_path+fname, 'wb') as file:
+    #     np.save(file, mtx)
+    #     np.save(file, dist)
+    #     print('camera intrinsic parameters saved')
+
+
+    # # test for the re-projection error
+    # mean_error = 0
+    # for i in range(len(objpoints)):
+    #     imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+    #     error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
+    #     mean_error += error
+    # print( "total error in pixels: {}".format(mean_error/len(objpoints)) )
+
+    # access saved intrinsic parameters
+    mtx, dist = intrinsic_cam_para()
     print('camera matrix: \n', mtx, '\ndistortion: \n', dist)
-
-    # save the intrinsic calibrated parameters
-    fname = "camera_calib_intrinsic.npy"
-    mtx_path = os.path.join(os.getcwd(), 'calibrationData/')
-    with open(mtx_path+fname, 'wb') as file:
-        np.save(file, mtx)
-        np.save(file, dist)
-        print('camera intrinsic parameters saved')
-
-
-    # test for the re-projection error
-    mean_error = 0
-    for i in range(len(objpoints)):
-        imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-        error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
-        mean_error += error
-    print( "total error in pixels: {}".format(mean_error/len(objpoints)) )
-
  
     # calibrate camera extrinsic parameters
     # extrinsic_confirmation(calib_path)

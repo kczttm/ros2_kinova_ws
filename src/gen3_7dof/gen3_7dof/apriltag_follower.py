@@ -10,7 +10,6 @@ from isaac_ros_apriltag_interfaces.msg import AprilTagDetectionArray
 from tf2_ros import TransformBroadcaster, TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-# from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
 
 from .tool_box import get_endoscope_tf_from_yaml, get_desired_endoscope_pose_from_tag, get_inverse_tf
 
@@ -66,7 +65,7 @@ class TagFollowerNode(Node):
         # get the tf described in source frame coordinates
         try:
             now = rclpy.time.Time()
-            till = rclpy.duration.Duration(seconds=1.0)
+            # till = rclpy.duration.Duration(seconds=1.0)
             tf = self.tf_buffer.lookup_transform(
                 target_frame, source_frame, now)
             return get_inverse_tf(tf)

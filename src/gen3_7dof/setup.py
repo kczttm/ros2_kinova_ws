@@ -47,7 +47,9 @@ setup(
     entry_points={
         'console_scripts': [
             'chase_controller_node = gen3_7dof.chase_controller:main',
-            'apriltag_follower_node = gen3_7dof.apriltag_follower:main'
+            'apriltag_follower_node = gen3_7dof.apriltag_follower:main',
+            'take_pictures_action_server = gen3_7dof.take_pictures_action_server:main',
+            'take_pictures_action_client = gen3_7dof.take_pictures_action_client:main',
         ],
     },
 )

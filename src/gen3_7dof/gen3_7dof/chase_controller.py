@@ -12,7 +12,10 @@ from geometry_msgs.msg import Pose, TransformStamped
 from tf2_ros import TransformBroadcaster
 #from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
 
-from .tool_box import TCPArguments, getRotMtx, R2rot, quaternion_to_euler, euler_to_quaternion, get_endoscope_tf_from_yaml 
+from .tool_box import broadcast_world_EE_tf, broadcase_EE_endo_tf
+from .tool_box import get_endoscope_tf_from_yaml
+from .tool_box import getRotMtx, R2rot, quaternion_to_euler, euler_to_quaternion 
+from .tool_box import TCPArguments
 
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
@@ -22,14 +25,17 @@ from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 
 
 class ChaseController(Node):
-    def __init__(self, base):
+    def __init__(self, base, base_cyclic=None):
         super().__init__('chase_controller_node')
         ## Kortex API declarations
         self.base = base
+        self.base_cyclic = base_cyclic
+
         # Make sure the arm is in Single Level Servoing mode (high-level mode)
         base_servo_mode = Base_pb2.ServoingModeInformation()
         base_servo_mode.servoing_mode = Base_pb2.SINGLE_LEVEL_SERVOING
         self.base.SetServoingMode(base_servo_mode)
+        
         # kortex twist control mode
         self.command = Base_pb2.TwistCommand()
         # note that twist is naturally in tool frame, but this conversion made things a bit easy
@@ -115,22 +121,10 @@ class ChaseController(Node):
         self.pos_pub.publish(feedback_pose)
 
         # broadcast tf
-        t = TransformStamped()
-        t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = "world"
-        t.child_frame_id = "end_effector"
-        t.transform.translation.x = current_pose.x
-        t.transform.translation.y = current_pose.y
-        t.transform.translation.z = current_pose.z
-        t.transform.rotation.x = current_quat[0]
-        t.transform.rotation.y = current_quat[1]
-        t.transform.rotation.z = current_quat[2]
-        t.transform.rotation.w = current_quat[3]
-        self.tf_br.sendTransform(t)
+        broadcast_world_EE_tf(self.base_cyclic, self, self.tf_br)
 
         # send static tf from end_effector to endoscope
-        self.static_tf.header.stamp = self.get_clock().now().to_msg()
-        self.tf_br.sendTransform(self.static_tf)
+        broadcase_EE_endo_tf(self, self.tf_br, self.static_tf)
 
 
     def move_to_pose(self):
@@ -193,7 +187,8 @@ def main(args=None):
     with DeviceConnection.createTcpConnection(tcp_args) as router:
         # Create connection services
         base = BaseClient(router)
-        robot_controller = ChaseController(base)
+        base_cyclic = BaseCyclicClient(router)
+        robot_controller = ChaseController(base, base_cyclic)
         rclpy.spin(robot_controller)
     
     robot_controller.destroy_node()

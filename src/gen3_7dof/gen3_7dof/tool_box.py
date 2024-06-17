@@ -1,18 +1,87 @@
+# Toolbox for Kinova Gen3 7 dof robot
+# Put-togethered by: Chuizheng Kong
+# Last Edited: 2024-06-13
+
 import os, yaml, time, threading
 import numpy as np
+import rclpy
 
 from geometry_msgs.msg import TransformStamped
+from tf2_ros import TransformException
+
 
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
 from kortex_api.autogen.client_stubs.ControlConfigClientRpc import ControlConfigClient
 from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 
-class TCPArguments:
-    def __init__(self):
-        self.ip = "192.168.1.10"
-        self.username = "admin"
-        self.password = "admin"
+##**************Catalog of Functions**************
+## 1. TF2 Related Codes
+## 2. Interfacing Configs
+## 3. Rotation Representation Conversions
+## 4. Robot Command Functions
+##************************************************
+
+######################### TF2 Related Codes #########################
+def broadcase_EE_endo_tf(active_node, tf_br, EE_endo_tf):
+    """
+    Broadcast the end effector to endoscope transformation to the TF tree.
+    
+    Args:
+        kinova_base_cyclic (BaseCyclicClient): Kinova Gen3 7 dof base cyclic client.
+        active_node (rclpy.node.Node): Active ROS2 node.
+        tf_br (tf2_ros.TransformBroadcaster): TransformBroadcaster object.
+        EE_endo_tf (geometry_msgs.msg.TransformStamped): output of the get_endoscope_tf_from_yaml().
+    """
+
+    EE_endo_tf.header.stamp = active_node.get_clock().now().to_msg()
+    tf_br.sendTransform(EE_endo_tf)
+
+
+def broadcast_world_EE_tf(kinova_base_cyclic, active_node, tf_br):
+    """
+    Broadcast the end effector transformation to the TF tree.
+    
+    Args:
+        kinova_base_cyclic (BaseCyclicClient): Kinova Gen3 7 dof base cyclic client.
+        active_node (rclpy.node.Node): Active ROS2 node.
+        tf_br (tf2_ros.TransformBroadcaster): TransformBroadcaster object.
+        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
+    """
+    # Get the current end effector pose
+    feedback = kinova_base_cyclic.RefreshFeedback()
+    th_x_rad = feedback.base.tool_pose_theta_x
+    th_y_rad = feedback.base.tool_pose_theta_y
+    th_z_rad = feedback.base.tool_pose_theta_z
+    feedback_quat = euler_to_quaternion(th_x_rad, th_y_rad, th_z_rad)
+
+    tf = TransformStamped()
+    tf.header.stamp = active_node.get_clock().now().to_msg()
+    tf.header.frame_id = "world"
+    tf.child_frame_id = "end_effector"
+    tf.transform.translation.x = feedback.base.tool_pose_x
+    tf.transform.translation.y = feedback.base.tool_pose_y
+    tf.transform.translation.z = feedback.base.tool_pose_z
+    tf.transform.rotation.x = feedback_quat[0]
+    tf.transform.rotation.y = feedback_quat[1]
+    tf.transform.rotation.z = feedback_quat[2]
+    tf.transform.rotation.w = feedback_quat[3]
+    tf_br.sendTransform(tf)
+
+
+def get_tf(active_node, tf_buffer, source_frame, target_frame):
+    # get the tf described in source frame coordinates
+    active_node.get_logger().info(f"Searching for tf from {source_frame} to {target_frame}")
+    rclpy.spin_once(active_node)
+    try:
+        now = rclpy.time.Time()
+        till = rclpy.duration.Duration(seconds=15.0)
+        tf = tf_buffer.lookup_transform(
+            target_frame, source_frame, now, till)
+        return get_inverse_tf(tf)
+    except TransformException as e:
+        active_node.get_logger().error(f"Failed to get tf from {source_frame} to {target_frame}")
+        return None
 
 
 def get_inverse_tf(tf):
@@ -69,32 +138,26 @@ def tf_to_vectors(tf):
     return pos, q
 
 
-def quaternion_rotate_vector(q, v):
+def tf_to_hom_mtx(tf):
     """
-    Rotate a vector using a quaternion.
+    Convert a TransformStamped message to a 4x4 homogeneous matrix.
     
     Args:
-        q (numpy.array): Quaternion in the form [x, y, z, w].
-        v (numpy.array): Vector to rotate.
+        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
     
     Returns:
-        numpy.array: Rotated vector.
+        numpy.array: 4x4 homogeneous matrix.
     """
-    vq = np.array([v[0], v[1], v[2], 0])
-    q_inv = np.array([-q[0], -q[1], -q[2], q[3]])
-    return quaternion_multiply(quaternion_multiply(q, vq), q_inv)[:3]
-
-
-def quaternion_multiply(q1, q2):
-    x1, y1, z1, w1 = q1
-    x2, y2, z2, w2 = q2
+    # Extract the position and quaternion from the TransformStamped message
+    p, q = tf_to_vectors(tf)
     
-    w3 = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-    x3 = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-    y3 = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
-    z3 = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
-    
-    return np.array([x3, y3, z3, w3])
+    # Compute the homogeneous matrix from the position and quaternion
+    R = tf_to_rot_mtx(tf)
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = p
+    return T
+
 
 
 def tf_to_rot_mtx(tf):
@@ -117,6 +180,8 @@ def tf_to_rot_mtx(tf):
     
     return R
 
+
+######################### Interfacing Configs #########################
 
 def get_endoscope_tf_from_yaml():
     """
@@ -188,59 +253,34 @@ def get_desired_endoscope_pose_from_tag():
     return desired_endo
 
 
+######################### Rotation Representation Conversions #########################
 
-def check_for_end_or_abort(e):
-    """Return a closure checking for END or ABORT notifications
-
-    Arguments:
-    e -- event to signal when the action is completed
-        (will be set when an END or ABORT occurs)
+def quaternion_rotate_vector(q, v):
     """
-    def check(notification, e = e):
-        print("EVENT : " + \
-              Base_pb2.ActionEvent.Name(notification.action_event))
-        if notification.action_event == Base_pb2.ACTION_END \
-        or notification.action_event == Base_pb2.ACTION_ABORT:
-            e.set()
-    return check
-
-
-def example_move_to_home_position(base):
-    TIMEOUT_DURATION = 10  # in seconds
-    # Make sure the arm is in Single Level Servoing mode (high-level mode)
-    base_servo_mode = Base_pb2.ServoingModeInformation()
-    base_servo_mode.servoing_mode = Base_pb2.SINGLE_LEVEL_SERVOING
-    base.SetServoingMode(base_servo_mode)
+    Rotate a vector using a quaternion.
     
-    # Move arm to ready position
-    print("Moving the arm to home position")
-    action_type = Base_pb2.RequestedActionType()
-    action_type.action_type = Base_pb2.REACH_JOINT_ANGLES
-    action_list = base.ReadAllActions(action_type)
-    action_handle = None
-    for action in action_list.action_list:
-        if action.name == "Home":
-            action_handle = action.handle
+    Args:
+        q (numpy.array): Quaternion in the form [x, y, z, w].
+        v (numpy.array): Vector to rotate.
+    
+    Returns:
+        numpy.array: Rotated vector.
+    """
+    vq = np.array([v[0], v[1], v[2], 0])
+    q_inv = np.array([-q[0], -q[1], -q[2], q[3]])
+    return quaternion_multiply(quaternion_multiply(q, vq), q_inv)[:3]
 
-    if action_handle == None:
-        print("Can't reach safe position. Exiting")
-        return False
 
-    e = threading.Event()
-    notification_handle = base.OnNotificationActionTopic(
-        check_for_end_or_abort(e),
-        Base_pb2.NotificationOptions()
-    )
-
-    base.ExecuteActionFromReference(action_handle)
-    finished = e.wait(TIMEOUT_DURATION)
-    base.Unsubscribe(notification_handle)
-
-    if finished:
-        print("home position reached")
-    else:
-        print("Timeout on action notification wait")
-    return finished
+def quaternion_multiply(q1, q2):
+    x1, y1, z1, w1 = q1
+    x2, y2, z2, w2 = q2
+    
+    w3 = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    x3 = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y3 = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2
+    z3 = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+    
+    return np.array([x3, y3, z3, w3])
 
 
 def euler_to_rotation_matrix(roll, pitch, yaw):
@@ -334,6 +374,7 @@ def quaternion_to_euler(quaternion):
 
 
 def getRotMtx(raw_pose):
+    # take raw pose from the kinova and convert to rotation matrix
     # need to convert to radian
     R_0T = euler_to_rotation_matrix(raw_pose.theta_x*np.pi/180,
                                     raw_pose.theta_y*np.pi/180,
@@ -385,6 +426,119 @@ def R2rot(R):
 
 def invhat(khat):
     return np.array([(-khat[1,2] + khat[2,1]),(khat[0,2] - khat[2,0]),(-khat[0,1]+khat[1,0])])/2
+
+
+######################### Robot Command Functions #########################
+class TCPArguments:
+    def __init__(self):
+        self.ip = "192.168.1.10"
+        self.username = "admin"
+        self.password = "admin"
+
+
+def check_for_end_or_abort(e):
+    """Return a closure checking for END or ABORT notifications
+
+    Arguments:
+    e -- event to signal when the action is completed
+        (will be set when an END or ABORT occurs)
+    """
+    def check(notification, e = e):
+        print("EVENT : " + \
+              Base_pb2.ActionEvent.Name(notification.action_event))
+        if notification.action_event == Base_pb2.ACTION_END \
+        or notification.action_event == Base_pb2.ACTION_ABORT:
+            e.set()
+    return check
+
+
+def get_world_EE_HomoMtx(base):
+    # get the homogeneous matrix of the end effector in the world frame
+    current_pose = base.GetMeasuredCartesianPose()
+    R = getRotMtx(current_pose)
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = np.array([current_pose.x, current_pose.y, current_pose.z])
+
+    return T
+
+
+def move_to_home_position(base):
+    TIMEOUT_DURATION = 10  # in seconds
+    # Make sure the arm is in Single Level Servoing mode (high-level mode)
+    base_servo_mode = Base_pb2.ServoingModeInformation()
+    base_servo_mode.servoing_mode = Base_pb2.SINGLE_LEVEL_SERVOING
+    base.SetServoingMode(base_servo_mode)
+    
+    # Move arm to ready position
+    print("Moving the arm to home position")
+    action_type = Base_pb2.RequestedActionType()
+    action_type.action_type = Base_pb2.REACH_JOINT_ANGLES
+    action_list = base.ReadAllActions(action_type)
+    action_handle = None
+    for action in action_list.action_list:
+        if action.name == "Home":
+            action_handle = action.handle
+
+    if action_handle == None:
+        print("Can't reach safe position. Exiting")
+        return False
+
+    e = threading.Event()
+    notification_handle = base.OnNotificationActionTopic(
+        check_for_end_or_abort(e),
+        Base_pb2.NotificationOptions()
+    )
+    
+    base.ExecuteActionFromReference(action_handle)
+    finished = e.wait(TIMEOUT_DURATION)
+    base.Unsubscribe(notification_handle)
+
+    if finished:
+        print("home position reached")
+    else:
+        print("Timeout on action notification wait")
+    return finished
+
+
+def move_tool_pose_relative(base, base_cyclic, pose_kinova):
+    # move the end effector to a relative position of the current pose
+    # pose_kinova is [x,y,z,theta_x,theta_y,theta_z] in meters and degrees
+
+    print("Starting tool_pose relative movement ...")
+    action = Base_pb2.Action()
+    action.name = "Tool Pose Relative Movement"
+    action.application_data = ""
+    TIMEOUT_DURATION = 10  # in seconds
+
+    feedback = base_cyclic.RefreshFeedback()
+
+    cartesian_pose = action.reach_pose.target_pose
+    cartesian_pose.x = feedback.base.tool_pose_x + pose_kinova[0]    # (meters)
+    cartesian_pose.y = feedback.base.tool_pose_y + pose_kinova[1]    # (meters)
+    cartesian_pose.z = feedback.base.tool_pose_z + pose_kinova[2]    # (meters)
+    cartesian_pose.theta_x = feedback.base.tool_pose_theta_x + pose_kinova[3] # (degrees)
+    cartesian_pose.theta_y = feedback.base.tool_pose_theta_y + pose_kinova[4] # (degrees)
+    cartesian_pose.theta_z = feedback.base.tool_pose_theta_z + pose_kinova[5] # (degrees)
+
+    e = threading.Event()
+    notification_handle = base.OnNotificationActionTopic(
+        check_for_end_or_abort(e),
+        Base_pb2.NotificationOptions()
+    )
+
+    print("Executing action")
+    base.ExecuteAction(action)
+
+    print("Waiting for movement to finish ...")
+    finished = e.wait(TIMEOUT_DURATION)
+    base.Unsubscribe(notification_handle)
+
+    if finished:
+        print("tool_pose relative movement completed")
+    else:
+        print("Timeout on action notification wait")
+    return finished
 
 
 def move_end_effector(base, desired_pose):

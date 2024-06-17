@@ -1,0 +1,8 @@
+# requested pic horizontal spacing to the right in mm 
+float32 spacing
+---
+# Resulting images
+sensor_msgs/Image[] images
+---
+# Feedback images
+string status
