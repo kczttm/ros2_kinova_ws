@@ -14,13 +14,17 @@ from cv_bridge import CvBridge
 class ImagePublisher(Node):
     def __init__(self, cam_id = 0):
         super().__init__('cv_img_pub')
-        self.pub = self.create_publisher(Image, 'cv_frame'+str(cam_id), 10)
+        self.pub = self.create_publisher(Image, 'cv_frame_'+str(cam_id), 10)
 
-        self.pub_period = 0.1
+        self.pub_period = 1/40 # 30 Hz
 
         self.timer = self.create_timer(self.pub_period, self.timer_callback)
 
         self.cap = cv2.VideoCapture(cam_id) # check which number in dev/video#
+        width = 1920
+        height = 1080
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
         self.cb = CvBridge()
 

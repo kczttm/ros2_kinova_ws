@@ -239,6 +239,62 @@ def get_endoscope_tf_from_yaml():
     return endoscope_tf
 
 
+def get_polli_fork_tf_from_yaml():
+    """
+    Get the polli fork to EE transformation from a yaml file.
+    If the file doesn't exist, use a default transformation. 
+    The output is a TransformStamped message.   
+    """
+    pkg_dir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),'..'))
+    config_dir = os.path.join(pkg_dir, 'config/')
+    fname = "polli_fork_from_ee.yaml"
+    
+    try:
+        with open(config_dir+fname, "r") as file:
+            data = yaml.safe_load(file)
+
+    except FileNotFoundError:
+        print("File not found. Using default transformation.")
+        # camera frame is 180 degree rotated around z axis of end effector frame
+        # camera origin is 0.155m away from the end effector +z axis
+        # camera origin is 0.065m away from the end effector -y axis
+        data = {
+            "header": {
+                "frame_id": "end_effector"
+            },
+            "child_frame_id": "polli_fork",
+            "transform": {
+                "translation": {
+                    "x": 0.0,
+                    "y": -0.065,
+                    "z": 0.155
+                },
+                "rotation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 1.0, 
+                    "w": 0.0
+                }
+            }
+        }
+        with open(config_dir+fname, "w") as file:
+            yaml.safe_dump(data, file)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+    tf = TransformStamped()
+    tf.header.frame_id = data["header"]["frame_id"]
+    tf.child_frame_id = data["child_frame_id"]
+    tf.transform.translation.x = data["transform"]["translation"]["x"]
+    tf.transform.translation.y = data["transform"]["translation"]["y"]
+    tf.transform.translation.z = data["transform"]["translation"]["z"]
+    tf.transform.rotation.x = data["transform"]["rotation"]["x"]
+    tf.transform.rotation.y = data["transform"]["rotation"]["y"]
+    tf.transform.rotation.z = data["transform"]["rotation"]["z"]
+    tf.transform.rotation.w = data["transform"]["rotation"]["w"]
+    return tf
+
+
 def get_desired_endoscope_pose_from_tag():
     ## Need to add time stamp and parent frame id
     desired_endo = TransformStamped()
@@ -281,6 +337,26 @@ def quaternion_multiply(q1, q2):
     z3 = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
     
     return np.array([x3, y3, z3, w3])
+
+
+def rotation_matrix_to_euler(rotation_matrix):
+    """
+    Convert a rotation matrix to Euler angles.
+
+    Args:
+    - rotation_matrix (numpy.ndarray): 3x3 rotation matrix.
+
+    Returns:
+    - roll (float): Rotation around the x-axis (in radians).
+    - pitch (float): Rotation around the y-axis (in radians).
+    - yaw (float): Rotation around the z-axis (in radians).
+    """
+    # Extract the Euler angles from the rotation matrix
+    roll = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+    pitch = np.arctan2(-rotation_matrix[2, 0], np.sqrt(rotation_matrix[2, 1] ** 2 + rotation_matrix[2, 2] ** 2))
+    yaw = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+
+    return roll, pitch, yaw
 
 
 def euler_to_rotation_matrix(roll, pitch, yaw):
@@ -428,6 +504,16 @@ def invhat(khat):
     return np.array([(-khat[1,2] + khat[2,1]),(khat[0,2] - khat[2,0]),(-khat[0,1]+khat[1,0])])/2
 
 
+def H_mtx_to_kinova_pose_in_base(H_mtx):
+    # convert a homogeneous matrix to a kinova pose in the base frame
+    # H_mtx is a 4x4 numpy array
+    # returns a 6x1 numpy array [x,y,z,theta_x,theta_y,theta_z] in meters and degrees
+    p = H_mtx[:3,3]
+    R = H_mtx[:3,:3]
+    roll, pitch, yaw = rotation_matrix_to_euler(R)
+    return np.array([p[0], p[1], p[2], np.degrees(roll), np.degrees(pitch), np.degrees(yaw)])
+
+
 ######################### Robot Command Functions #########################
 class TCPArguments:
     def __init__(self):
@@ -501,7 +587,47 @@ def move_to_home_position(base):
     return finished
 
 
-def move_tool_pose_relative(base, base_cyclic, pose_kinova):
+def move_tool_pose_absolute(base, pose_kinova, speed=None):
+    # move the end effector to an absolute position
+    # pose_kinova is [x,y,z,theta_x,theta_y,theta_z] in meters and degrees
+
+    print("Starting tool_pose absolute movement ...")
+    action = Base_pb2.Action()
+    action.name = "Tool Pose Movement"
+    action.application_data = ""
+    TIMEOUT_DURATION = 10  # in seconds
+    if speed is not None:
+        action.reach_pose.constraint.speed.translation = speed # m/s
+
+    cartesian_pose = action.reach_pose.target_pose
+    cartesian_pose.x = pose_kinova[0]    # (meters)
+    cartesian_pose.y = pose_kinova[1]    # (meters)
+    cartesian_pose.z = pose_kinova[2]    # (meters)
+    cartesian_pose.theta_x = pose_kinova[3] # (degrees)
+    cartesian_pose.theta_y = pose_kinova[4] # (degrees)
+    cartesian_pose.theta_z = pose_kinova[5] # (degrees)
+
+    e = threading.Event()
+    notification_handle = base.OnNotificationActionTopic(
+        check_for_end_or_abort(e),
+        Base_pb2.NotificationOptions()
+    )
+
+    print("Executing action")
+    base.ExecuteAction(action)
+
+    print("Waiting for movement to finish ...")
+    finished = e.wait(TIMEOUT_DURATION)
+    base.Unsubscribe(notification_handle)
+
+    if finished:
+        print("tool_pose absolute movement completed")
+    else:
+        print("Timeout on action notification wait")
+    return finished
+
+
+def move_tool_pose_relative(base, base_cyclic, pose_kinova, speed=None):
     # move the end effector to a relative position of the current pose
     # pose_kinova is [x,y,z,theta_x,theta_y,theta_z] in meters and degrees
 
@@ -510,6 +636,8 @@ def move_tool_pose_relative(base, base_cyclic, pose_kinova):
     action.name = "Tool Pose Relative Movement"
     action.application_data = ""
     TIMEOUT_DURATION = 10  # in seconds
+    if speed is not None:
+        action.reach_pose.constraint.speed.translation = speed
 
     feedback = base_cyclic.RefreshFeedback()
 

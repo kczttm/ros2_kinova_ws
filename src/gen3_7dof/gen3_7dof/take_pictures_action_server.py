@@ -1,6 +1,7 @@
 from .utilities import DeviceConnection
 import numpy as np
 np.set_printoptions(suppress=True)
+import time
 
 import rclpy
 from rclpy.action import ActionServer, GoalResponse
@@ -52,7 +53,7 @@ class TakePicturesActionServer(Node):
         self.EE_endo_tf = get_endoscope_tf_from_yaml()
         self.world_endo_tf = None
         
-        self.image_sub = self.create_subscription(Image, 'resize/image', self.image_callback, 10)
+        self.image_sub = self.create_subscription(Image, 'endoscope/resize/image', self.image_callback, 10)
         
         self.bridge = CvBridge()
         self.image_data = None
@@ -87,10 +88,16 @@ class TakePicturesActionServer(Node):
         # Move in meter to the right in endoscope frame
         x_offset = goal_handle.request.spacing
         p_endo = np.array([x_offset, 0, 0])
+
         # do the with router thing here
         with DeviceConnection.createTcpConnection(self.tcp_args) as router:
             self.base = BaseClient(router)
             self.base_cyclic = BaseCyclicClient(router)
+
+            # In the future, try to implement a way to check if Session is in use
+            # feedback = self.base_cyclic.RefreshFeedback()
+            # is_robot_active = feedback.interconnect.status_flags
+            # print('active?', is_robot_active)
 
             # Make sure the arm is in Single Level Servoing mode (high-level mode)
             base_servo_mode = Base_pb2.ServoingModeInformation()
@@ -119,36 +126,24 @@ class TakePicturesActionServer(Node):
             p_world_kinova = np.array([p_world[0], p_world[1], p_world[2], 0, 0, 0])
 
             # move the tool in the endoscope frame
-            move_tool_pose_relative(self.base, self.base_cyclic, p_world_kinova)
-            
-            # start_time = time.time()
-            # while self.get_tf("world", "endoscope") is None:
-            #     if time.time() - start_time > 5:
-            #         self.get_logger().error("Failed to get endoscope frame")
-            #         return
-            #     rclpy.spin_once(self)
+            action_result = move_tool_pose_relative(self.base, self.base_cyclic, p_world_kinova)
 
-        new_image = self.capture_image()
-        goal_handle.publish_feedback(TakePictures.Feedback(status='Captured second image'))
+            # wait for 0.5 second
+            time.sleep(0.5)
 
-        result = TakePictures.Result()
+            new_image = self.capture_image()
+            goal_handle.publish_feedback(TakePictures.Feedback(status='Captured second image'))
 
-        result.images = [self.bridge.cv2_to_imgmsg(initial_image, encoding='bgr8'),
-                         self.bridge.cv2_to_imgmsg(new_image, encoding='bgr8')]
+            result = TakePictures.Result()
+
+            result.images = [self.bridge.cv2_to_imgmsg(initial_image, encoding='bgr8'),
+                            self.bridge.cv2_to_imgmsg(new_image, encoding='bgr8')]
+            # move the tool back to the initial position
+            action_result = move_tool_pose_relative(self.base, self.base_cyclic, -p_world_kinova)
         
         goal_handle.publish_feedback(TakePictures.Feedback(status='Finished with capturing images'))
         goal_handle.succeed()
         return result
-
-    # async def _wait_for_arm_to_stop(self):
-    #     # Periodically check the robot status using the Kortex API
-    #     self.get_logger().info('Waiting for robot arm to stop...')
-    #     is_robot_active = True
-    #     while is_robot_active:
-    #         feedback = self.base_cyclic.RefreshFeedback()
-    #         is_robot_active = feedback.robot_activity_state == BaseCyclic_pb2.RobotActivityState.ACTIVE
-    #         await rclpy.sleep(0.1)
-    #     self.get_logger().info('Robot arm has stopped')
 
 def main(args=None):
     rclpy.init(args=args)

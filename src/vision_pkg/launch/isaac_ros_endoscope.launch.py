@@ -35,6 +35,10 @@ def generate_launch_description():
             'output_width': 1600,
             'output_height': 1200,
         }],
+        remappings=[('image_raw', 'endoscope/image_raw'),  # specify this as endoscope
+                    ('camera_info', 'endoscope/camera_info'),
+                    ('image_rect', 'endoscope/image_rect'),
+                    ('camera_info_rect', 'endoscope/camera_info_rect')],
     )
 
     resize_node = ComposableNode(
@@ -47,8 +51,10 @@ def generate_launch_description():
             'output_width': 640,
             'output_height': 480,
         }],
-        remappings=[('image', 'image_rect'),  # connect to the ResizeNode
-                    ('camera_info', 'camera_info_rect')],
+        remappings=[('image', 'endoscope/image_rect'),  # connect to the RectifyNode
+                    ('camera_info', 'endoscope/camera_info_rect'),
+                    ('resize/image', 'endoscope/resize/image'),  # publish to this topic
+                    ('resize/camera_info', 'endoscope/resize/camera_info')],
         )
 
     usb_cam_params_path = os.path.join(
@@ -59,7 +65,8 @@ def generate_launch_description():
     usb_cam_node = ComposableNode(
         package='usb_cam',
         plugin='usb_cam::UsbCamNode',
-        name='usb_cam',
+        name='usb_cam_endoscope',
+        namespace='endoscope',
         parameters=[usb_cam_params_path]
     )
 
@@ -69,9 +76,9 @@ def generate_launch_description():
         namespace='',
         executable='component_container_mt',
         composable_node_descriptions=[
+            usb_cam_node,
             rectify_node,
             resize_node,
-            usb_cam_node
         ],
         output='screen'
     )

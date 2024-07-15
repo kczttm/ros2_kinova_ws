@@ -1,0 +1,10 @@
+# requested to pursuit the largest yolo detected strawberry flower
+# input request is the desired size of the yolo bounding box diagonal after approaching
+# the input is decimal persentage of the height of the camera frame
+float32 des_yolo_diag
+---
+# Resulted status
+string result
+---
+# Feedback status
+string status

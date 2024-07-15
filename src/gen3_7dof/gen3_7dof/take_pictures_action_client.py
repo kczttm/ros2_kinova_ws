@@ -9,6 +9,7 @@ import numpy as np
 class TakePicturesActionClient(Node):
     def __init__(self):
         super().__init__('take_pictures_action_client')
+        self.get_logger().info('TakePicturesActionClient started, waiting for action server...')
         self._action_client = ActionClient(self, TakePictures, 'gen3_action/take_pictures')
 
     def send_goal(self, spacing):
@@ -55,18 +56,26 @@ class TakePicturesActionClient(Node):
             cv2.waitKey(2000)
             cv2.destroyAllWindows()
 
+    def to_cv2_img(self, result):
+        images = []
+        for imgmsg in result.images:
+            img = np.frombuffer(imgmsg.data, dtype=np.uint8).reshape((imgmsg.height, imgmsg.width, 3))
+            images.append(img)
+        return images
+
+
     
-def main(args=None):
+def main(args=None,spacing = 0.005):
     rclpy.init(args=args)
     action_client = TakePicturesActionClient()
-    spacing = 0.01 # meters
+    # spacing = 0.01 # meters
     action_client.send_goal(spacing)
     rclpy.spin(action_client)
     future = action_client._get_result_future
     result = future.result().result
-    # print(result)
-    # print(future.result().result)
+    images = action_client.to_cv2_img(result)
     action_client.destroy_node()
+    return images
 
 if __name__ == '__main__':
     main()

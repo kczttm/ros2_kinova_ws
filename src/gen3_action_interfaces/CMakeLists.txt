@@ -16,6 +16,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/TakePictures.action"
+  "action/YoloPursuit.action"
   DEPENDENCIES builtin_interfaces sensor_msgs
 )
 

@@ -1,26 +1,27 @@
 /**:
     ros__parameters:
       # make sure to first plug in the endoscope camera as the first camera
+      # then plugg in the microscope camera as the second camera
       # run docker after all cameras are plugged in
-      video_device: "/dev/video2"
+      video_device: "/dev/video4"
       framerate: 30.0
       io_method: "mmap"
-      frame_id: "endoscope"
-      pixel_format: "mjpeg2rgb"
+      frame_id: "microscope"
+      pixel_format: "raw_mjpeg"
       av_device_format: "YUV422P"
-      image_width: 1600
-      image_height: 1200
-      camera_name: "endoscope"
+      image_width: 3840
+      image_height: 2160
+      camera_name: "microscope"
       # reusing same camera intrinsics only for demo, should really be unique for camera2"
-      camera_info_url: "package://vision_pkg/config/camera_info_endoscope.yaml"
+      # camera_info_url: "package://vision_pkg/config/camera_info_micros.yaml"
       brightness: -1
       contrast: -1
       saturation: -1
       sharpness: -1
       gain: -1
       auto_white_balance: false
-      white_balance: 1000
+      white_balance: 4000
       autoexposure: false
-      exposure: 50
+      exposure: 100
       autofocus: false
       focus: -1

@@ -1,3 +1,8 @@
+# To check camera's supported format, open a terminal
+```
+v4l2-ctl --device=/dev/video2 --list-formats
+```
+
 # Calibrating the camera using ROS2
 ## In first terminal
 ```

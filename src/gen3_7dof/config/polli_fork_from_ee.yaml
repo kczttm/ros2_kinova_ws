@@ -1,4 +1,4 @@
-child_frame_id: endoscope
+child_frame_id: polli_fork
 header:
   frame_id: end_effector
 transform:
@@ -9,5 +9,5 @@ transform:
     z: 1.0
   translation:
     x: 0.0
-    y: -0.05
-    z: 0.154 # 0.11
+    y: -0.070
+    z: 0.200 # ~~ + 0.045
