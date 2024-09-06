@@ -12,12 +12,14 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/TakePictures.action"
   "action/YoloPursuit.action"
-  DEPENDENCIES builtin_interfaces sensor_msgs
+  "action/RealSenseFlowerPoses.action"
+  DEPENDENCIES builtin_interfaces sensor_msgs std_msgs
 )
 
 if(BUILD_TESTING)

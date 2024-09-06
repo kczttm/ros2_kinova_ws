@@ -32,7 +32,9 @@ RUN python3 -m pip install \
 RUN apt-get update && apt-get install -y \
         mlocate \
         ros-humble-usb-cam \
-        ros-humble-isaac-ros-apriltag
+        ros-humble-isaac-ros-apriltag \
+        packagekit-gtk3-module  
+# last one might not be the solution
 
 RUN python3 -m pip install \
         jupyterlab \

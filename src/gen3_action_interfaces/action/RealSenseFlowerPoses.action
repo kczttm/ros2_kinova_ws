@@ -1,0 +1,8 @@
+# requested pic horizontal spacing to the right in mm 
+int32 sahi_n_slices
+---
+# Resulting images
+float32[] result
+---
+# Feedback images
+string status

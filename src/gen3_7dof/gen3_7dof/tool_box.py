@@ -183,6 +183,27 @@ def tf_to_rot_mtx(tf):
 
 ######################### Interfacing Configs #########################
 
+def get_realsense_on_link1_HomoMtx(base):
+    # use the drawing dimension of the base to first link and 
+    # the drawings of the camera and
+    # the current measured angle of the first link 
+    # to get the homogeneous matrix
+
+    p_base_to_link1 = np.array([0.0, 0.0, 0.1564]) # meters
+    p_link1_to_camera = np.array([0.03005, 0.0762, 0.1125])
+    # note that instead of the using the link1's own frame we extend the base frame on this
+    joints = base.GetMeasuredJointAngles()
+    first_joint_angle = joints.joint_angles[0].value  # note in degrees
+    R_base_link1 = euler_to_rotation_matrix(0, 0, -np.radians(first_joint_angle))
+    p_base_to_camera = p_base_to_link1 + R_base_link1 @ p_link1_to_camera
+    R_link1_camera = euler_to_rotation_matrix(-np.radians(90), 0, -np.radians(90))
+    R_base_camera = R_base_link1 @ R_link1_camera
+    H_base_camera = np.eye(4)
+    H_base_camera[:3, :3] = R_base_camera
+    H_base_camera[:3, 3] = p_base_to_camera
+    return H_base_camera
+
+
 def get_endoscope_tf_from_yaml():
     """
     Get the endoscope to EE transformation from a yaml file.
@@ -341,7 +362,7 @@ def quaternion_multiply(q1, q2):
 
 def rotation_matrix_to_euler(rotation_matrix):
     """
-    Convert a rotation matrix to Euler angles.
+    Convert a rotation matrix to (ZYX) Euler angles.
 
     Args:
     - rotation_matrix (numpy.ndarray): 3x3 rotation matrix.
@@ -361,7 +382,7 @@ def rotation_matrix_to_euler(rotation_matrix):
 
 def euler_to_rotation_matrix(roll, pitch, yaw):
     """
-    Convert Euler angles to a rotation matrix.
+    Convert (ZYX) Euler angles to a rotation matrix.
 
     Args:
     - roll (float): Rotation around the x-axis (in radians).
@@ -549,6 +570,13 @@ def get_world_EE_HomoMtx(base):
     return T
 
 
+def get_joint_angles(base):
+    # get the joint angles of the robot
+    joints = base.GetMeasuredJointAngles()
+    joint_angles = [joint.value for joint in joints.joint_angles]
+    return joint_angles
+
+
 def move_to_home_position(base):
     TIMEOUT_DURATION = 10  # in seconds
     # Make sure the arm is in Single Level Servoing mode (high-level mode)
@@ -675,15 +703,6 @@ def move_end_effector(base, desired_pose):
     ### Author: Chuizheng Kong
     ### Created on: 05/09/2024
     
-    max_vel = 0.5-0.1  # m/s  0.5 is max
-    #max_vel = 0.1
-    max_w = 70.0  # ~ 50 deg/s
-    kp_pos = 2.5
-    kp_ang = 4.0
-
-    dcc_range = max_vel / (kp_pos * 2)  # dcc_range should be smaller than max_vel/kp_pos
-    ang_dcc_range = max_w / (kp_ang * 6)
-    
     # Make sure the arm is in Single Level Servoing mode (high-level mode)
     base_servo_mode = Base_pb2.ServoingModeInformation()
     base_servo_mode.servoing_mode = Base_pb2.SINGLE_LEVEL_SERVOING
@@ -713,47 +732,20 @@ def move_end_effector(base, desired_pose):
     while True:
         current_pose = base.GetMeasuredCartesianPose()
         R = getRotMtx(current_pose)
-        
         # reducing the pos error (in global frame!!)
         pos_diff = np.array([desired_pose.x-current_pose.x,
-                             desired_pose.y-current_pose.y,
-                             desired_pose.z-current_pose.z])
+                                desired_pose.y-current_pose.y,
+                                desired_pose.z-current_pose.z])
         
-        pos_diff_norm = np.linalg.norm(pos_diff)
-        v_temp = max_vel * pos_diff/pos_diff_norm
-
         # reducing ang error using ER = RRd^T
         ER = R @ R_d.T
-        # frobenius norm of matrix squre root of ER or eR2
-        k,theta = R2rot(ER)
-        k=np.array(k)
-        eR2=-np.sin(theta/2)*k * 180 / np.pi  # not the best name but works fine
-        
-        eR2_norm = np.linalg.norm(eR2)+1e-5
-        w_temp = max_w * eR2/eR2_norm
 
-        # print(pos_diff_norm, eR2_norm)
-
-        reached = pos_diff_norm < eps_pos and eR2_norm < eps_ang
-        
-        if reached or time.time()>t_start+max_exe_time:
-            print("Robot Stop")
-            if reached:
-                print("Goal Pose reached")
-            base.Stop()
+        stopping, v, w = move_end_effector_vel(base, pos_diff, ER,
+                                                max_vel=0.4, max_w=70.0, kp_pos=2.5, kp_ang=4.0, 
+                                                eps_pos = eps_pos, eps_ang = eps_ang,
+                                                t_start=t_start, max_exe_time=max_exe_time)
+        if stopping:
             break
-            
-        # go in max vel when outside dcc_range
-        if pos_diff_norm < dcc_range:
-            v = kp_pos * pos_diff
-        else:
-            v = v_temp
-
-        if eR2_norm < ang_dcc_range:
-            kR = kp_ang*np.eye(3)
-            w = kR @ eR2 
-        else:
-            w = w_temp
             
         twist.linear_x = v[0]
         twist.linear_y = v[1] 
@@ -764,3 +756,89 @@ def move_end_effector(base, desired_pose):
         base.SendTwistCommand(command)
         #time.sleep(0.025)  # 40 Hz high-level control loop freq (ok might not need)
     return True
+
+
+def move_end_effector_vel(base, pos_diff, ER, 
+                          max_vel=0.4, max_w=70.0, kp_pos=2.5, kp_ang=4.0, 
+                          eps_pos = 0.001, eps_ang = 0.01,
+                          dcc_factor = 2, ang_dcc_factor = 6,
+                          t_start=None, max_exe_time=10):
+    ### function for Kinova Gen3 7 dof on Kortex API
+    ### takes the error in world (BASE) frame of the robot arm
+    ### Fundation for vel control code, can correct both pos and ang error at the same time
+
+
+    dcc_range = max_vel / (kp_pos * dcc_factor)  # dcc_range should be smaller than max_vel/kp_pos
+    ang_dcc_range = max_w / (kp_ang * ang_dcc_factor)  # dcc_range should be smaller than max_vel/kp_pos
+
+    pos_diff_norm = np.linalg.norm(pos_diff)+1e-5
+    v_temp = max_vel * pos_diff/pos_diff_norm
+
+    # frobenius norm of matrix squre root of ER or eR2
+    k,theta = R2rot(ER)
+    k=np.array(k)
+    eR2=-np.sin(theta/2)*k * 180 / np.pi  # not the best name but works fine
+    
+    eR2_norm = np.linalg.norm(eR2)+1e-5
+    w_temp = max_w * eR2/eR2_norm
+
+    # print(pos_diff_norm, eR2_norm)
+
+    reached = pos_diff_norm < eps_pos and eR2_norm < eps_ang
+    timeout = t_start is not None and time.time() > t_start + max_exe_time
+    stopping = reached or timeout
+    
+    if stopping:
+        print("Robot Stop")
+        if reached:
+            print("Goal Pose reached")
+        base.Stop()
+        
+    # go in max vel when outside dcc_range
+    if pos_diff_norm < dcc_range:
+        v = kp_pos * pos_diff
+    else:
+        v = v_temp
+
+    if eR2_norm < ang_dcc_range:
+        kR = kp_ang*np.eye(3)
+        w = kR @ eR2 
+    else:
+        w = w_temp
+    
+    return stopping, v, w
+
+
+def move_joints(base, desired_joints):
+    # move the joints to a desired position
+    # desired_joints is a list of joint angles in degrees
+    # joint 1 is the base joint, joint 7 is the end effector joint
+    print("Starting joint movement ...")
+    action = Base_pb2.Action()
+    action.name = "Joint Movement"
+    action.application_data = ""
+    TIMEOUT_DURATION = 10  # in seconds
+
+    for joint_id in range(7):
+        joint_angle = action.reach_joint_angles.joint_angles.joint_angles.add()
+        joint_angle.joint_identifier = joint_id
+        joint_angle.value = desired_joints[joint_id]
+
+    e = threading.Event()
+    notification_handle = base.OnNotificationActionTopic(
+        check_for_end_or_abort(e),
+        Base_pb2.NotificationOptions()
+    )
+
+    print("Executing action")
+    base.ExecuteAction(action)
+
+    print("Waiting for movement to finish ...")
+    finished = e.wait(TIMEOUT_DURATION)
+    base.Unsubscribe(notification_handle)
+
+    if finished:
+        print("joint movement completed")
+    else:
+        print("Timeout on action notification wait")
+    return finished
