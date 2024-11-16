@@ -197,6 +197,9 @@ def get_realsense_on_link1_HomoMtx(base):
     R_base_link1 = euler_to_rotation_matrix(0, 0, -np.radians(first_joint_angle))
     p_base_to_camera = p_base_to_link1 + R_base_link1 @ p_link1_to_camera
     R_link1_camera = euler_to_rotation_matrix(-np.radians(90), 0, -np.radians(90))
+    # account for the ~10 degree error on the mount about the y axis
+    R_link1_camera = R_link1_camera @ euler_to_rotation_matrix(0, np.radians(0.5), 0)
+    
     R_base_camera = R_base_link1 @ R_link1_camera
     H_base_camera = np.eye(4)
     H_base_camera[:3, :3] = R_base_camera

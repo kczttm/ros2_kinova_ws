@@ -77,8 +77,12 @@ def generate_launch_description():
             'align_depth.enable': True,
             # 'rgb_camera.profile': '640x360x60',
             'rgb_camera.profile': '1280x720x30',
-            'rgb_camera.exposure': 150,
+            # 'rgb_camera.exposure': 150, # 150 indoor, 10 outdoor
             # 'rgb_camera.gain': 10,
+            # 'rgb_camera.auto_exposure_roi.bottom': 570,
+            # 'rgb_camera.auto_exposure_roi.left': 900,
+            # 'rgb_camera.auto_exposure_roi.right': 1280,
+            # 'rgb_camera.auto_exposure_roi.top': 150,
             'depth_module.profile': '1280x720x30',
             'enable_depth': True,
             'publish_tf': False,

@@ -3,27 +3,59 @@
 This guild was performed on a x86_64 Linux System with Ubuntu 22.04. The computer carried a NVIDIA GeForce RTX 4090.
 
 ## Installation and Preparation of Docker Dev Env
-First follow the [Isaac ROS Developer Environment Setup](https://nvidia-isaac-ros.github.io/getting_started/dev_env_setup.html) to install Docker, nvidia-container-toolkit, and Git LFS. 
+### For Ubuntu 22.04 please starts here
+1. Install Docker Engine from [this guild](https://docs.docker.com/engine/install/ubuntu/).
+
+2. Configure Docker for rootless access [here](https://docs.docker.com/engine/install/linux-postinstall/).
+
+3. Follow the [Developer Environment Setup](https://nvidia-isaac-ros.github.io/getting_started/dev_env_setup.html) to install nvidia-container-toolkit, Git LFS, and setup `~/workspaces/isaac_ros-dev/src` as `ISAAC_ROS_WS`.
 
 For Step 1, select `On x86_64 platforms`.
 For step 4, select `x86_64 and Jetson without SSD`.
 
+### Install [ISAAC ROS Commons](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common)
+```
+cd ~/workspaces/isaac_ros-dev/src
+git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
+```
+
 Once finished, navigate to the `src` folder, and clone this repository and `isaac_ros_common`:
 ```
 cd ${ISAAC_ROS_WS}/src && \
-   git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git && \
+   git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
+```
+
+### Obtain the repository
+> **_NOTE:_**  make sure to clone it into the the right repo
+```
+cd ${ISAAC_ROS_WS}/src && \
    git clone https://github.com/kczttm/ros2_kinova_ws.git
 ```
 
-Copy `.isaac_ros_common-config` file to the home directory:
+Navigate to the project directory and copy `.isaac_ros_common-config` file to the home directory:
 ```
-cd ros2_kinova_ws
-cp ./.isaac_ros_common-config ~/
+cd ros2_kinova_ws && \
+   cp ./.isaac_ros_common-config ~/
+```
+### Entering Docker
+We will add the following shortcut to build a docker env according to `~/.isaac_ros_common-config`
+```
+echo "alias ldb='cd ${ISAAC_ROS_WS}src/isaac_ros_common && ./scripts/run_dev.sh'" >> ~/.bashrc
+echo "alias ld='cd ${ISAAC_ROS_WS}src/isaac_ros_common && ./scripts/run_dev.sh --skip_image_build'" >> ~/.bashrc
+```
+Note that `ldb` will build the docker first then launch it. `ld` will just launch what has already been built.
+
+Now we start by with a fresh build:
+```
+source ~/.bashrc
+ldb
 ```
 
-To run the docker
+### Inside Docker
+For the first time building (or you have made changes non-python files under `${ISAAC_ROS_WS}src/`) build the package:
 ```
-cd ${ISAAC_ROS_WS}/src/isaac_ros_common && ./scripts/run_dev.sh
+colcon build --symlink-install
+source /workspaces/isaac_ros-dev/install/setup.bash
 ```
 
 ## Package Overviews
@@ -35,8 +67,7 @@ The method apriltag_follower work with the [Isaac ROS AprilTag](https://nvidia-i
 
 To launch the apriltag_chaser node, setup `Isaac ROS AprilTag package, then:
 ```
-source /workspaces/isaac_ros-dev/install/setup.bash && \
-   ros2 launch gen3_7dof apriltag_chaser.launch.py
+ros2 launch gen3_7dof apriltag_chaser.launch.py
 ```
 
 ### [vision_pkg](/src/vision_pkg/vision_pkg/README.md)
