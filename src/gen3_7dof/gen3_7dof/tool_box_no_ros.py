@@ -4,10 +4,6 @@
 
 import os, yaml, time, threading
 import numpy as np
-import rclpy
-
-from geometry_msgs.msg import TransformStamped
-from tf2_ros import TransformException
 
 
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
@@ -16,170 +12,11 @@ from kortex_api.autogen.client_stubs.ControlConfigClientRpc import ControlConfig
 from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
 
 ##**************Catalog of Functions**************
-## 1. TF2 Related Codes
-## 2. Interfacing Configs
-## 3. Rotation Representation Conversions
-## 4. Robot Command Functions
+## 1. Interfacing Configs
+## 2. Rotation Representation Conversions
+## 3. Robot Command Functions
+## 4. Other tools
 ##************************************************
-
-######################### TF2 Related Codes #########################
-def broadcase_EE_endo_tf(active_node, tf_br, EE_endo_tf):
-    """
-    Broadcast the end effector to endoscope transformation to the TF tree.
-    
-    Args:
-        kinova_base_cyclic (BaseCyclicClient): Kinova Gen3 7 dof base cyclic client.
-        active_node (rclpy.node.Node): Active ROS2 node.
-        tf_br (tf2_ros.TransformBroadcaster): TransformBroadcaster object.
-        EE_endo_tf (geometry_msgs.msg.TransformStamped): output of the get_endoscope_tf_from_yaml().
-    """
-
-    EE_endo_tf.header.stamp = active_node.get_clock().now().to_msg()
-    tf_br.sendTransform(EE_endo_tf)
-
-
-def broadcast_world_EE_tf(kinova_base_cyclic, active_node, tf_br):
-    """
-    Broadcast the end effector transformation to the TF tree.
-    
-    Args:
-        kinova_base_cyclic (BaseCyclicClient): Kinova Gen3 7 dof base cyclic client.
-        active_node (rclpy.node.Node): Active ROS2 node.
-        tf_br (tf2_ros.TransformBroadcaster): TransformBroadcaster object.
-        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
-    """
-    # Get the current end effector pose
-    feedback = kinova_base_cyclic.RefreshFeedback()
-    th_x_rad = feedback.base.tool_pose_theta_x
-    th_y_rad = feedback.base.tool_pose_theta_y
-    th_z_rad = feedback.base.tool_pose_theta_z
-    feedback_quat = euler_to_quaternion(th_x_rad, th_y_rad, th_z_rad)
-
-    tf = TransformStamped()
-    tf.header.stamp = active_node.get_clock().now().to_msg()
-    tf.header.frame_id = "world"
-    tf.child_frame_id = "end_effector"
-    tf.transform.translation.x = feedback.base.tool_pose_x
-    tf.transform.translation.y = feedback.base.tool_pose_y
-    tf.transform.translation.z = feedback.base.tool_pose_z
-    tf.transform.rotation.x = feedback_quat[0]
-    tf.transform.rotation.y = feedback_quat[1]
-    tf.transform.rotation.z = feedback_quat[2]
-    tf.transform.rotation.w = feedback_quat[3]
-    tf_br.sendTransform(tf)
-
-
-def get_tf(active_node, tf_buffer, source_frame, target_frame):
-    # get the tf described in source frame coordinates
-    active_node.get_logger().info(f"Searching for tf from {source_frame} to {target_frame}")
-    rclpy.spin_once(active_node)
-    try:
-        now = rclpy.time.Time()
-        till = rclpy.duration.Duration(seconds=15.0)
-        tf = tf_buffer.lookup_transform(
-            target_frame, source_frame, now, till)
-        return get_inverse_tf(tf)
-    except TransformException as e:
-        active_node.get_logger().error(f"Failed to get tf from {source_frame} to {target_frame}")
-        return None
-
-
-def get_inverse_tf(tf):
-    """
-    Get the inverse of a TransformStamped message.
-    
-    Args:
-        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
-    
-    Returns:
-        geometry_msgs.msg.TransformStamped: Inverse of the input TransformStamped message.
-    """
-    p, q = tf_to_vectors(tf)
-    inv_q = [-q[0], -q[1], -q[2], q[3]]
-    inv_p = -quaternion_rotate_vector(inv_q, p)
-    inv_tf = TransformStamped()
-    inv_tf.header.frame_id = tf.child_frame_id
-    inv_tf.child_frame_id = tf.header.frame_id
-    inv_tf.transform.translation.x = inv_p[0]
-    inv_tf.transform.translation.y = inv_p[1]
-    inv_tf.transform.translation.z = inv_p[2]
-    inv_tf.transform.rotation.x = inv_q[0]
-    inv_tf.transform.rotation.y = inv_q[1]
-    inv_tf.transform.rotation.z = inv_q[2]
-    inv_tf.transform.rotation.w = inv_q[3]
-    return inv_tf
-
-
-def tf_to_vectors(tf):
-    """
-    Convert a TransformStamped message to position and quaternion vectors.
-    
-    Args:
-        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
-    
-    Returns:
-        numpy.array: Position vector [x, y, z].
-        numpy.array: Orientation vector [qx,qy,qz,qw].
-    """
-    # Extract the position from the TransformStamped message
-    pos = np.array([
-        tf.transform.translation.x,
-        tf.transform.translation.y,
-        tf.transform.translation.z
-    ])
-    
-    # Extract the orientation from the TransformStamped message
-    q = np.array([
-        tf.transform.rotation.x,
-        tf.transform.rotation.y,
-        tf.transform.rotation.z,
-        tf.transform.rotation.w
-    ])
-    return pos, q
-
-
-def tf_to_hom_mtx(tf):
-    """
-    Convert a TransformStamped message to a 4x4 homogeneous matrix.
-    
-    Args:
-        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
-    
-    Returns:
-        numpy.array: 4x4 homogeneous matrix.
-    """
-    # Extract the position and quaternion from the TransformStamped message
-    p, q = tf_to_vectors(tf)
-    
-    # Compute the homogeneous matrix from the position and quaternion
-    R = tf_to_rot_mtx(tf)
-    T = np.eye(4)
-    T[:3, :3] = R
-    T[:3, 3] = p
-    return T
-
-
-
-def tf_to_rot_mtx(tf):
-    """
-    Convert a TransformStamped message to a 3x3 rotation matrix.
-    
-    Args:
-        tf (geometry_msgs.msg.TransformStamped): TransformStamped message.
-    
-    Returns:
-        numpy.array: 3x3 rotation matrix.
-    """
-    # Extract the quaternion from the TransformStamped message
-    q = [tf.transform.rotation.x, tf.transform.rotation.y,
-         tf.transform.rotation.z, tf.transform.rotation.w]
-    
-    # Compute the rotation matrix from the quaternion
-    ori_rpy = quaternion_to_euler(q)
-    R = euler_to_rotation_matrix(ori_rpy[0], ori_rpy[1], ori_rpy[2])
-    
-    return R
-
 
 ######################### Interfacing Configs #########################
 
@@ -206,131 +43,6 @@ def get_realsense_on_link1_HomoMtx(base):
     H_base_camera[:3, 3] = p_base_to_camera
     return H_base_camera
 
-
-def get_endoscope_tf_from_yaml():
-    """
-    Get the endoscope to EE transformation from a yaml file.
-    If the file doesn't exist, use a default transformation. 
-    The output is a TransformStamped message.   
-    """
-    pkg_dir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),'..'))
-    config_dir = os.path.join(pkg_dir, 'config/')
-    fname = "endoscope_from_ee.yaml"
-    
-    try:
-        with open(config_dir+fname, "r") as file:
-            data = yaml.safe_load(file)
-
-    except FileNotFoundError:
-        print("File not found. Using default transformation.")
-        # camera frame is 180 degree rotated around z axis of end effector frame
-        # camera origin is 0.11m away from the end effector +z axis
-        # camera origin is 0.05m away from the end effector -y axis
-        data = {
-            "header": {
-                "frame_id": "end_effector"
-            },
-            "child_frame_id": "endoscope",
-            "transform": {
-                "translation": {
-                    "x": 0.0,
-                    "y": -0.05,
-                    "z": 0.11
-                },
-                "rotation": {
-                    "x": 0.0,
-                    "y": 0.0,
-                    "z": 1.0, 
-                    "w": 0.0
-                }
-            }
-        }
-        with open(config_dir+fname, "w") as file:
-            yaml.safe_dump(data, file)
-    except yaml.YAMLError as exc:
-        print(exc)
-
-    endoscope_tf = TransformStamped()
-    endoscope_tf.header.frame_id = data["header"]["frame_id"]
-    endoscope_tf.child_frame_id = data["child_frame_id"]
-    endoscope_tf.transform.translation.x = data["transform"]["translation"]["x"]
-    endoscope_tf.transform.translation.y = data["transform"]["translation"]["y"]
-    endoscope_tf.transform.translation.z = data["transform"]["translation"]["z"]
-    endoscope_tf.transform.rotation.x = data["transform"]["rotation"]["x"]
-    endoscope_tf.transform.rotation.y = data["transform"]["rotation"]["y"]
-    endoscope_tf.transform.rotation.z = data["transform"]["rotation"]["z"]
-    endoscope_tf.transform.rotation.w = data["transform"]["rotation"]["w"]
-    return endoscope_tf
-
-
-def get_polli_fork_tf_from_yaml():
-    """
-    Get the polli fork to EE transformation from a yaml file.
-    If the file doesn't exist, use a default transformation. 
-    The output is a TransformStamped message.   
-    """
-    pkg_dir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__),'..'))
-    config_dir = os.path.join(pkg_dir, 'config/')
-    fname = "polli_fork_from_ee.yaml"
-    
-    try:
-        with open(config_dir+fname, "r") as file:
-            data = yaml.safe_load(file)
-
-    except FileNotFoundError:
-        print("File not found. Using default transformation.")
-        # camera frame is 180 degree rotated around z axis of end effector frame
-        # camera origin is 0.155m away from the end effector +z axis
-        # camera origin is 0.065m away from the end effector -y axis
-        data = {
-            "header": {
-                "frame_id": "end_effector"
-            },
-            "child_frame_id": "polli_fork",
-            "transform": {
-                "translation": {
-                    "x": 0.0,
-                    "y": -0.065,
-                    "z": 0.155
-                },
-                "rotation": {
-                    "x": 0.0,
-                    "y": 0.0,
-                    "z": 1.0, 
-                    "w": 0.0
-                }
-            }
-        }
-        with open(config_dir+fname, "w") as file:
-            yaml.safe_dump(data, file)
-    except yaml.YAMLError as exc:
-        print(exc)
-
-    tf = TransformStamped()
-    tf.header.frame_id = data["header"]["frame_id"]
-    tf.child_frame_id = data["child_frame_id"]
-    tf.transform.translation.x = data["transform"]["translation"]["x"]
-    tf.transform.translation.y = data["transform"]["translation"]["y"]
-    tf.transform.translation.z = data["transform"]["translation"]["z"]
-    tf.transform.rotation.x = data["transform"]["rotation"]["x"]
-    tf.transform.rotation.y = data["transform"]["rotation"]["y"]
-    tf.transform.rotation.z = data["transform"]["rotation"]["z"]
-    tf.transform.rotation.w = data["transform"]["rotation"]["w"]
-    return tf
-
-
-def get_desired_endoscope_pose_from_tag():
-    ## Need to add time stamp and parent frame id
-    desired_endo = TransformStamped()
-    desired_endo.child_frame_id = "desired_endoscope"
-    desired_endo.transform.translation.x = 0.0
-    desired_endo.transform.translation.y = 0.0
-    desired_endo.transform.translation.z = -0.1 # 10cm above the tag
-    desired_endo.transform.rotation.x = 0.0
-    desired_endo.transform.rotation.y = 0.0 
-    desired_endo.transform.rotation.z = 0.0     
-    desired_endo.transform.rotation.w = 1.0  # no rotation
-    return desired_endo
 
 
 ######################### Rotation Representation Conversions #########################
@@ -579,11 +291,26 @@ def get_joint_angles(base):
     joint_angles = [joint.value for joint in joints.joint_angles]
     return joint_angles
 
+
 def get_realtime_q_qdot(base_feedback):
-    # will convert from degrees to radians
-    joint_angles = [joint.value for joint in base_feedback.joint_angles]
-    joint_velocities = [joint.value for joint in base_feedback.joint_velocities]
+    # will convert from degrees to radians then wrapped to [-pi, pi]
+    joint_angles = []
+    joint_velocities = []
+    for joint in base_feedback.actuators:
+        joint_velocities.append(joint.velocity)
+        if joint.position > 180:
+            joint_angles.append(joint.position - 360)
+        else:
+            joint_angles.append(joint.position)
     return np.radians(joint_angles), np.radians(joint_velocities)
+
+
+def get_realtime_torque(base_feedback):
+    joint_torques = []
+    for joint in base_feedback.actuators:
+            joint_torques.append(joint.torque) 
+    return np.array(joint_torques)
+
 
 def move_to_home_position(base):
     TIMEOUT_DURATION = 10  # in seconds
@@ -850,3 +577,23 @@ def move_joints(base, desired_joints):
     else:
         print("Timeout on action notification wait")
     return finished
+
+
+######################### Other tools #########################
+class LowPassFilter:
+    def __init__(self, first_measurement, cutoff_freq = 15, sampling_rate=1000):
+        self.cutoff_freq = cutoff_freq
+        self.sampling_rate = sampling_rate
+        self.alpha = self.compute_alpha()
+        self.prev_measurement = first_measurement
+    
+    def compute_alpha(self):
+        time_constant = 1 / (2 * np.pi * self.cutoff_freq)
+        delta_t = 1 / self.sampling_rate
+        return delta_t / (delta_t + time_constant)
+    
+    def filter(self, measurement):
+        measurement = np.atleast_1d(measurement)
+        filtered_measurement = self.alpha * measurement + (1 - self.alpha) * self.prev_measurement
+        self.prev_measurement = filtered_measurement
+        return filtered_measurement
