@@ -47,6 +47,6 @@
         use_fake_hardware="$(arg use_fake_hardware)"
         fake_sensor_commands="$(arg fake_sensor_commands)"
         use_external_cable="$(arg use_external_cable)" >
-        <origin xyz="0 0 0" rpy="0 0 0" />  <!-- position robot in the world -->
+        <origin xyz="0 -0.058 0.232548" rpy="-1.5708 0 0" />  <!-- position robot in the world -->
     </xacro:load_robot>
 </robot>
